@@ -21,7 +21,7 @@ async def extract_audio_bytes(data: dict, audio_msg: dict) -> bytes | None:
     url = audio_msg.get("url") or data.get("mediaUrl")
     if url:
         # En Evolution API, a veces necesitamos el apikey para descargar la media
-        api_key = os.getenv("EVOLUTION_API_KEY")
+        api_key = os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN")
         headers = {"apikey": api_key} if api_key else {}
         
         async with aiohttp.ClientSession() as session:

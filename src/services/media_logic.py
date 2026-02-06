@@ -24,7 +24,7 @@ async def extract_media_base64(data: dict, message_obj: dict, media_key: str, ap
     """
     Extrae el contenido de media y lo devuelve como string Base64 para OpenAI.
     """
-    key = api_key or os.getenv("EVOLUTION_API_KEY")
+    key = api_key or os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN")
     
     # Intentar obtener base64 directo
     media_base64 = (

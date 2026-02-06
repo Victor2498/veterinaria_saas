@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL")
-EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY")
+EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "").rstrip("/")
+EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN")
 INSTANCE_NAME = os.getenv("INSTANCE_NAME", "DogBot")
 
 async def send_whatsapp_message(phone: str, text: str, api_url: str = None, api_key: str = None, instance_name: str = None):
@@ -13,8 +13,8 @@ async def send_whatsapp_message(phone: str, text: str, api_url: str = None, api_
     Sends a text message using Evolution API with dynamic configuration.
     """
     # Fallback to env if not provided (legacy/default)
-    url_base = api_url or os.getenv("EVOLUTION_API_URL")
-    key = api_key or os.getenv("EVOLUTION_API_KEY")
+    url_base = (api_url or os.getenv("EVOLUTION_API_URL", "")).rstrip("/")
+    key = api_key or os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN")
     instance = instance_name or os.getenv("INSTANCE_NAME", "DogBot")
 
     if not url_base or not key:
