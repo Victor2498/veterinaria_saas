@@ -50,9 +50,9 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
     from argparse import Namespace
     org = Namespace(**org_data)
 
-    print(f"DEBUG: Webhook hit ({org_slug}) - Event: {body.get('event', 'unknown')}")
     try:
         body = await request.json()
+        print(f"DEBUG: Webhook hit ({org_slug}) - Event: {body.get('event', 'unknown')}")
         data = body.get("data", body) if body.get("data") else body
         
         message_type = data.get("messageType")
