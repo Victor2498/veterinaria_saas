@@ -15,6 +15,10 @@ from prompts import get_system_prompt
 
 router = APIRouter()
 
+@router.post("/webhook")
+async def handle_default_webhook(request: Request, background_tasks: BackgroundTasks):
+    return await handle_dynamic_webhook("central", request, background_tasks)
+
 @router.post("/webhook/{org_slug}")
 async def handle_dynamic_webhook(org_slug: str, request: Request, background_tasks: BackgroundTasks):
     # 1. Try Cache first
