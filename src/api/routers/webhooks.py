@@ -52,16 +52,24 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
     print(f"DEBUG: Webhook hit for slug: {org_slug}")
     try:
         body = await request.json()
-        print(f"DEBUG: Raw body: {json.dumps(body)[:200]}...") # Log first 200 chars
-        data = body.get("data", {})
+        event_type = body.get("event", "unknown")
+        print(f"DEBUG: Event received: {event_type}")
+        
+        # Evolution v2 uses "data", v1/others might use top level
+        data = body.get("data", body) if body.get("data") else body
+        
         message_type = data.get("messageType")
         sender = data.get("pushName", "Usuario")
-        phone = data.get("key", {}).get("remoteJid", "").split("@")[0]
         
-        print(f"DEBUG: Message from {phone} ({sender}), type: {message_type}")
+        # Handle different nested structures for phone
+        key = data.get("key", {})
+        phone = key.get("remoteJid", "").split("@")[0] if key.get("remoteJid") else ""
+        if not phone and data.get("phone"): phone = data.get("phone") # Fallback
+        
+        print(f"DEBUG: Extracted -> Phone: {phone}, Sender: {sender}, Type: {message_type}")
 
         if not phone: 
-            print("DEBUG: No phone found, ignoring.")
+            print(f"DEBUG: Ignored (no phone). Body keys: {list(body.keys())}")
             return {"status": "ignored"}
 
         user_input = ""
