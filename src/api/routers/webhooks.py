@@ -45,14 +45,20 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
     from argparse import Namespace
     org = Namespace(**org_data)
 
+    print(f"DEBUG: Webhook hit for slug: {org_slug}")
     try:
         body = await request.json()
+        print(f"DEBUG: Raw body: {json.dumps(body)[:200]}...") # Log first 200 chars
         data = body.get("data", {})
         message_type = data.get("messageType")
         sender = data.get("pushName", "Usuario")
         phone = data.get("key", {}).get("remoteJid", "").split("@")[0]
         
-        if not phone: return {"status": "ignored"}
+        print(f"DEBUG: Message from {phone} ({sender}), type: {message_type}")
+
+        if not phone: 
+            print("DEBUG: No phone found, ignoring.")
+            return {"status": "ignored"}
 
         user_input = ""
         image_base64 = None
@@ -90,7 +96,11 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         elif message_type == "extendedTextMessage":
             user_input = data.get("message", {}).get("extendedTextMessage", {}).get("text", "")
 
-        if not user_input: return {"status": "ignored"}
+        if not user_input: 
+            print("DEBUG: No user input found, ignoring.")
+            return {"status": "ignored"}
+
+        print(f"DEBUG: User input processed: {user_input}")
 
         # Memory Logic (Scoped by phone)
         history = await redis_client.get_history(phone)
@@ -112,6 +122,7 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         messages.append({"role": "user", "content": user_input})
 
         bot_response = await get_chat_completion(messages, api_key=org.openai_api_key)
+        print(f"DEBUG: Bot response: {bot_response}")
 
         final_text = bot_response
         if "[[CONFIRMADO:" in bot_response:
@@ -123,12 +134,14 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 final_text = re.sub(r"\[\[CONFIRMADO:.*?\]\]", "", bot_response, flags=re.DOTALL).strip()
 
         # Send response via WhatsApp with Org Config
-        await send_whatsapp_message(
+        print(f"DEBUG: Sending WhatsApp message to {phone}...")
+        send_result = await send_whatsapp_message(
             phone, final_text, 
             api_url=org.evolution_api_url, 
             api_key=org.evolution_api_key, 
             instance_name=org.evolution_instance
         )
+        print(f"DEBUG: WhatsApp send result: {send_result}")
 
         history.append({"role": "user", "content": user_input})
         history.append({"role": "assistant", "content": final_text})
