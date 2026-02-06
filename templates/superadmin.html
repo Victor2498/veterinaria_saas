@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DogBot SaaS | Panel Maestro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --success: #10b981;
+            --danger: #f43f5e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .badge-lite {
+            background: #64748b;
+        }
+
+        .badge-basic {
+            background: #6366f1;
+        }
+
+        .badge-pro {
+            background: #ec4899;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ SuperAdmin Control Center</h1>
+            <a href="/logout" style="color: var(--danger); text-decoration: none;">Cerrar Sesión</a>
+        </div>
+
+        <div class="grid">
+            <!-- Sidebar: Create Org -->
+            <div class="card">
+                <h2>Nueva Veterinaria</h2>
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="orgName" placeholder="Veterinaria San Roque">
+                </div>
+                <div class="form-group">
+                    <label>Slug (URL)</label>
+                    <input type="text" id="orgSlug" placeholder="san-roque">
+                </div>
+                <div class="form-group">
+                    <label>Admin Username</label>
+                    <input type="text" id="admUser">
+                </div>
+                <div class="form-group">
+                    <label>Admin Password</label>
+                    <input type="password" id="admPass">
+                </div>
+                <div class="form-group">
+                    <label>Plan Inicial</label>
+                    <select id="orgPlan">
+                        <option value="lite">Lite (Sin Web Panel)</option>
+                        <option value="basic">Básico (Web Panel)</option>
+                        <option value="pro">Pro (Vision + Audio + PDF)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="createOrg()">Crear Veterinaria</button>
+            </div>
+
+            <!-- Main: Org List -->
+            <div class="card">
+                <h2>Clínicas Activas</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre / Slug</th>
+                            <th>Plan</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for org in organizations %}
+                        <tr>
+                            <td>
+                                <div><strong>{{ org.name }}</strong></div>
+                                <div style="font-size: 0.8rem; color: var(--text-dim);">/webhook/{{ org.slug }}</div>
+                            </td>
+                            <td>
+                                <select onchange="updatePlan({{ org.id }}, this.value)"
+                                    style="border: none; background: transparent; padding: 2px;">
+                                    <option value="lite" {% if org.plan_type=='lite' %}selected{% endif %}>Lite</option>
+                                    <option value="basic" {% if org.plan_type=='basic' %}selected{% endif %}>Básico
+                                    </option>
+                                    <option value="pro" {% if org.plan_type=='pro' %}selected{% endif %}>Pro</option>
+                                </select>
+                            </td>
+                            <td>
+                                <span class="badge {% if org.is_active %}badge-lite{% else %}danger{% endif %}"
+                                    style="background: {{ 'var(--success)' if org.is_active else 'var(--danger)' }};">
+                                    {{ 'ACTIVA' if org.is_active else 'SUSPENDIDA' }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-small" onclick="toggleStatus({{ org.id }})">
+                                    {{ 'Suspender' if org.is_active else 'Activar' }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function createOrg() {
+            const data = {
+                name: document.getElementById('orgName').value,
+                slug: document.getElementById('orgSlug').value,
+                admin_username: document.getElementById('admUser').value,
+                admin_password: document.getElementById('admPass').value,
+                plan_type: document.getElementById('orgPlan').value
+            };
+            const res = await fetch('/superadmin/create_org', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) location.reload();
+        }
+
+        async function updatePlan(id, plan) {
+            await fetch(`/superadmin/change_plan/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan })
+            });
+        }
+
+        async function toggleStatus(id) {
+            await fetch(`/superadmin/toggle_org/${id}`, { method: 'POST' });
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>
