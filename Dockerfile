@@ -1,9 +1,10 @@
 FROM python:3.10-slim
 
-# Install system dependencies for reportlab and others if needed
+# Install system dependencies for reportlab, ffmpeg and others
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
