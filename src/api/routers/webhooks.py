@@ -50,28 +50,19 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
     from argparse import Namespace
     org = Namespace(**org_data)
 
-    print(f"DEBUG: Webhook hit for slug: {org_slug}")
+    print(f"DEBUG: Webhook hit ({org_slug}) - Event: {body.get('event', 'unknown')}")
     try:
         body = await request.json()
-        event_type = body.get("event", "unknown")
-        print(f"DEBUG: Event received: {event_type}")
-        
-        # Evolution v2 uses "data", v1/others might use top level
         data = body.get("data", body) if body.get("data") else body
         
         message_type = data.get("messageType")
         sender = data.get("pushName", "Usuario")
         
-        # Handle different nested structures for phone
         key = data.get("key", {})
         phone = key.get("remoteJid", "").split("@")[0] if key.get("remoteJid") else ""
-        if not phone and data.get("phone"): phone = data.get("phone") # Fallback
+        if not phone and data.get("phone"): phone = data.get("phone")
         
-        print(f"DEBUG: Extracted -> Phone: {phone}, Sender: {sender}, Type: {message_type}")
-
-        if not phone: 
-            print(f"DEBUG: Ignored (no phone). Body keys: {list(body.keys())}")
-            return {"status": "ignored"}
+        if not phone: return {"status": "ignored"}
 
         user_input = ""
         image_base64 = None
@@ -109,11 +100,7 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         elif message_type == "extendedTextMessage":
             user_input = data.get("message", {}).get("extendedTextMessage", {}).get("text", "")
 
-        if not user_input: 
-            print("DEBUG: No user input found, ignoring.")
-            return {"status": "ignored"}
-
-        print(f"DEBUG: User input processed: {user_input}")
+        if not user_input: return {"status": "ignored"}
 
         # Memory Logic (Scoped by phone)
         history = await redis_client.get_history(phone)
