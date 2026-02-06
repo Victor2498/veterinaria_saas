@@ -162,5 +162,7 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"Webhook error: {e}")
+        import traceback
+        print(f"❌ Webhook error: {e}")
+        traceback.print_exc()
         return {"status": "error"}
