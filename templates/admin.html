@@ -17,12 +17,26 @@
             --text-main: #f8fafc;
             --text-dim: #94a3b8;
             --success: #10b981;
+            --border: rgba(255, 255, 255, 0.05);
+            --sidebar-hover: rgba(99, 102, 241, 0.1);
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-dim: #64748b;
+            --border: rgba(0, 0, 0, 0.05);
+            --sidebar-hover: rgba(99, 102, 241, 0.05);
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
 
         body {
@@ -37,17 +51,18 @@
         .sidebar {
             width: 280px;
             background: var(--card);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid var(--border);
             padding: 2rem;
             display: flex;
             flex-direction: column;
+            box-shadow: var(--card-shadow);
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 3rem;
-            color: var(--primary-light);
+            color: var(--primary);
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -63,12 +78,32 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            font-weight: 500;
         }
 
         .nav-item.active,
         .nav-item:hover {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary-light);
+            background: var(--sidebar-hover);
+            color: var(--primary);
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            margin-top: 1rem;
+            background: var(--sidebar-hover);
+            padding: 0.75rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-dim);
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-light);
+            color: var(--text-main);
         }
 
         /* Main Content */
@@ -86,27 +121,30 @@
         }
 
         .tag {
-            padding: 0.25rem 0.75rem;
+            padding: 0.4rem 1rem;
             border-radius: 99px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .tag-pro {
             background: linear-gradient(135deg, var(--secondary), #f43f5e);
             color: white;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
         }
 
         .tag-basic {
-            background: rgba(99, 102, 241, 0.2);
-            color: var(--primary-light);
+            background: var(--sidebar-hover);
+            color: var(--primary);
+            border: 1px solid var(--primary-light);
         }
 
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -115,23 +153,27 @@
             background: var(--card);
             padding: 1.5rem;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.3s;
+            border: 1px solid var(--border);
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: var(--card-shadow);
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: 700;
             margin: 0.5rem 0;
+            color: var(--text-main);
         }
 
         .stat-label {
             color: var(--text-dim);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            font-weight: 500;
         }
 
         /* Table Section */
@@ -139,7 +181,8 @@
             background: var(--card);
             border-radius: 24px;
             padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
         }
 
         .section-header {
@@ -158,27 +201,34 @@
             text-align: left;
             padding: 1rem;
             color: var(--text-dim);
-            font-weight: 500;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         td {
             padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
         }
 
         .btn {
             background: var(--primary);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
+            color: white !important;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
             text-decoration: none;
             font-size: 0.9rem;
+            font-weight: 600;
             transition: 0.3s;
+            display: inline-block;
         }
 
         .btn:hover {
             background: var(--primary-dark);
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -190,6 +240,10 @@
         <a href="#" class="nav-item">🗓️ Citas</a>
         <a href="#" class="nav-item">🐶 Pacientes</a>
         <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <span id="theme-text">Modo Claro</span>
+            <span id="theme-icon">🌞</span>
+        </div>
         <div style="margin-top: auto;">
             <a href="/logout" class="nav-item" style="color: #f43f5e;">🚪 Cerrar Sesión</a>
         </div>
@@ -253,6 +307,35 @@
             {% endif %}
         </div>
     </div>
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const isLight = body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            updateThemeUI(isLight);
+        }
+
+        function updateThemeUI(isLight) {
+            const text = document.getElementById('theme-text');
+            const icon = document.getElementById('theme-icon');
+            if (isLight) {
+                text.innerText = 'Modo Oscuro';
+                icon.innerText = '🌙';
+            } else {
+                text.innerText = 'Modo Claro';
+                icon.innerText = '🌞';
+            }
+        }
+
+        // Initialize theme
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                updateThemeUI(true);
+            }
+        })();
+    </script>
 </body>
 
 </html>
