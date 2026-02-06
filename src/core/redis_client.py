@@ -88,5 +88,3 @@ class RedisManager:
         await self._safe_call(self.redis.delete, f"user:{user_id}:history")
 
 redis_client = RedisManager()
-
-redis_client = RedisManager()
