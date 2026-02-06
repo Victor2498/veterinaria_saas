@@ -32,16 +32,16 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
             if not org or not org.is_active:
                 raise HTTPException(status_code=404, detail="Organization not found")
             
-            # Map model to dict for caching
+            # Map model to dict for caching, using ENV as fallback if DB is empty
             org_data = {
                 "id": org.id,
                 "name": org.name,
                 "slug": org.slug,
-                "evolution_api_url": org.evolution_api_url,
-                "evolution_api_key": org.evolution_api_key,
-                "evolution_instance": org.evolution_instance,
-                "openai_api_key": org.openai_api_key,
-                "plan_type": org.plan_type
+                "evolution_api_url": org.evolution_api_url or os.getenv("EVOLUTION_API_URL"),
+                "evolution_api_key": org.evolution_api_key or os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN"),
+                "evolution_instance": org.evolution_instance or os.getenv("INSTANCE_NAME"),
+                "openai_api_key": org.openai_api_key or os.getenv("OPENAI_API_KEY"),
+                "plan_type": org.plan_type or "pro" # Default to pro for testing if not set
             }
             await redis_client.set_org_config(org_slug, org_data)
     
