@@ -280,21 +280,23 @@
 <body>
     <div class="sidebar">
         <div class="logo">🐾 DogBot Admin</div>
-        <a href="/admin" class="nav-item active">📊 Dashboard</a>
-        <a href="#" class="nav-item">🗓️ Citas</a>
-        <a href="#" class="nav-item">🐶 Pacientes</a>
-        <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
-        <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Configuración</a>
-        <div class="theme-toggle" onclick="toggleTheme()">
-            <span id="theme-text">Modo Claro</span>
-            <span id="theme-icon">🌞</span>
-        </div>
+        <a href="#" class="nav-item active" onclick="showSection('dashboard', this)">📊 Dashboard</a>
+        <a href="#" class="nav-item" onclick="showSection('citas', this)">🗓️ Citas</a>
+        <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
+
         <div style="margin-top: auto;">
+            <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
+            <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Configuración</a>
+            <div class="theme-toggle" onclick="toggleTheme()">
+                <span id="theme-text">Modo Claro</span>
+                <span id="theme-icon">🌞</span>
+            </div>
             <a href="/logout" class="nav-item" style="color: #f43f5e;">🚪 Cerrar Sesión</a>
         </div>
     </div>
 
     <div class="main">
+        <!-- Header Dynamic? No, header is global -->
         <div class="header">
             <div>
                 <h1 style="font-size: 1.8rem;">Bienvenido, {{ username }}</h1>
@@ -305,51 +307,144 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Citas Totales</div>
-                <div class="stat-value">{{ appointments|length }}</div>
-                <div style="color: var(--success); font-size: 0.8rem;">↑ 12% este mes</div>
+        <!-- SECTION: DASHBOARD -->
+        <div id="section-dashboard" class="content-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Citas Totales</div>
+                    <div class="stat-value">{{ all_appointments|length }}</div>
+                    <div style="color: var(--success); font-size: 0.8rem;">↑ 12% este mes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pacientes Activos</div>
+                    <div class="stat-value">{{ patients_count }}</div>
+                    <div style="color: var(--primary-light); font-size: 0.8rem;">Base de datos completa</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">WhatsApp Status</div>
+                    <div class="stat-value" style="color: var(--success); font-size: 1.2rem;">🟢 Conectado</div>
+                    <div style="color: var(--text-dim); font-size: 0.8rem;">Instancia: {{ org.evolution_instance }}
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Pacientes Activos</div>
-                <div class="stat-value">{{ patients_count }}</div>
-                <div style="color: var(--primary-light); font-size: 0.8rem;">Base de datos completa</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">WhatsApp Status</div>
-                <div class="stat-value" style="color: var(--success); font-size: 1.2rem;">🟢 Conectado</div>
-                <div style="color: var(--text-dim); font-size: 0.8rem;">Instancia: {{ org.evolution_instance }}</div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Citas Recientes (WhatsApp)</h2>
+                    <a href="#" class="btn" onclick="showSection('citas')">Ver todas</a>
+                </div>
+                {% if recent_appointments %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_appointments %}
+                        <tr>
+                            <td>{{ row.Appointment.pet_name }}</td>
+                            <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
+                            <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td><span style="color: var(--success);">Confirmado</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="text-align: center; color: var(--text-dim); padding: 2rem;">No hay citas registradas aún.</p>
+                {% endif %}
             </div>
         </div>
 
-        <div class="section-card">
-            <div class="section-header">
-                <h2>Citas Recientes (WhatsApp)</h2>
-                <a href="#" class="btn">Ver todas</a>
+        <!-- SECTION: CITAS -->
+        <div id="section-citas" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Calendario de Citas</h2>
+                    <button class="btn" style="background: var(--success);">+ Nueva Cita</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Motivo</th>
+                            <th>Fecha y Hora</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in all_appointments %}
+                        <tr>
+                            <td>{{ row.Appointment.pet_name }}</td>
+                            <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
+                            <td>{{ row.Appointment.reason or 'Consulta General' }}</td>
+                            <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td><span style="color: var(--success);">Confirmado</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% if appointments %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Paciente</th>
-                        <th>Fecha</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for app in appointments %}
-                    <tr>
-                        <td>{{ app.pet_name }}</td>
-                        <td>{{ app.date.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td><span style="color: var(--success);">Confirmado</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p style="text-align: center; color: var(--text-dim); padding: 2rem;">No hay citas registradas aún.</p>
-            {% endif %}
+        </div>
+
+        <!-- SECTION: PACIENTES -->
+        <div id="section-pacientes" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Gestión de Pacientes</h2>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" placeholder="Buscar paciente o dueño..."
+                            style="padding: 0.5rem 1rem; border-radius: 10px; width: 300px;">
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Raza / Especie</th>
+                            <th>Edad / Peso</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in patients %}
+                        <tr>
+                            <td>
+                                <strong>{{ row.Patient.name }}</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Patient.sex or 'No
+                                    especificado' }}</span>
+                            </td>
+                            <td>{{ row.Owner.name or 'S/N' }}<br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Owner.phone_number
+                                    }}</span>
+                            </td>
+                            <td>{{ row.Patient.breed or row.Patient.species }}</td>
+                            <td>
+                                <span class="patient-age" data-birth="{{ row.Patient.birth_date }}"></span><br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Patient.weight or '--'
+                                    }} kg</span>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <a href="/admin/export_history/{{ row.Patient.id }}" class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary);">📜
+                                        Historia</a>
+                                    <a href="/admin/export_vaccines/{{ row.Patient.id }}" class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--secondary);">💉
+                                        Certificado</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -370,6 +465,41 @@
     </div>
 
     <script>
+        function showSection(sectionId, element) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            // Show target section
+            document.getElementById('section-' + sectionId).style.display = 'block';
+
+            // Update active state in sidebar
+            if (element) {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                element.classList.add('active');
+            }
+        }
+
+        // Helper to calculate age
+        function calculateAge(birthDate) {
+            if (!birthDate || birthDate === 'None') return 'N/A';
+            const birth = new Date(birthDate);
+            const now = new Date();
+            let years = now.getFullYear() - birth.getFullYear();
+            let months = now.getMonth() - birth.getMonth();
+            if (months < 0 || (months === 0 && now.getDate() < birth.getDate())) {
+                years--;
+                months += 12;
+            }
+            if (years > 0) return years + (years === 1 ? ' año' : ' años');
+            return months + (months === 1 ? ' mes' : ' meses');
+        }
+
+        function updateAges() {
+            document.querySelectorAll('.patient-age').forEach(span => {
+                const birth = span.getAttribute('data-birth');
+                span.innerText = calculateAge(birth);
+            });
+        }
+
         function openPasswordModal() {
             document.getElementById('passwordModal').style.display = 'flex';
         }
@@ -415,13 +545,14 @@
             }
         }
 
-        // Initialize theme
+        // Initialize
         (function () {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'light') {
                 document.body.classList.add('light-mode');
                 updateThemeUI(true);
             }
+            updateAges();
         })();
     </script>
 </body>

@@ -26,20 +26,42 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
         if not row: raise HTTPException(status_code=404)
         user, org = row
         
-        # 🛡️ Seguridad SaaS: El plan 'lite' no tiene acceso al dashboard gráfico
         if org.plan_type == "lite" and not user.is_superadmin:
             return templates.TemplateResponse("lite_plan_info.html", {"request": request, "org": org, "username": username})
 
-        # Data for dashboard
-        app_res = await session.execute(select(Appointment).where(Appointment.org_id == org.id).limit(5))
-        pat_res = await session.execute(select(Patient).where(Patient.org_id == org.id))
+        # 1. Resumen Dashboard (Citas recientes)
+        recent_res = await session.execute(
+            select(Appointment, Owner)
+            .join(Owner, Appointment.owner_id == Owner.id)
+            .where(Appointment.org_id == org.id)
+            .order_by(Appointment.date.desc())
+            .limit(5)
+        )
+        
+        # 2. Todas las Citas
+        all_app_res = await session.execute(
+            select(Appointment, Owner)
+            .join(Owner, Appointment.owner_id == Owner.id)
+            .where(Appointment.org_id == org.id)
+            .order_by(Appointment.date.desc())
+        )
+        
+        # 3. Todos los Pacientes
+        pat_all_res = await session.execute(
+            select(Patient, Owner)
+            .join(Owner, Patient.owner_id == Owner.id)
+            .where(Patient.org_id == org.id)
+            .order_by(Patient.name)
+        )
         
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "org": org,
-            "appointments": app_res.scalars().all(),
-            "patients_count": len(pat_res.scalars().all()),
-            "username": username
+            "username": username,
+            "recent_appointments": recent_res.all(),
+            "all_appointments": all_app_res.all(),
+            "patients": pat_all_res.all(),
+            "patients_count": len(pat_all_res.all()) # Simple count based on query length (not fully optimized but works for now)
         })
 
 @router.get("/subscription", response_class=HTMLResponse)
