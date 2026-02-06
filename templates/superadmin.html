@@ -76,10 +76,16 @@
             width: 100%;
             padding: 0.75rem;
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             outline: none;
+            cursor: pointer;
+        }
+
+        option {
+            background: var(--card);
+            color: white;
         }
 
         .btn {
@@ -199,7 +205,7 @@
                             </td>
                             <td>
                                 <select onchange="updatePlan({{ org.id }}, this.value)"
-                                    style="border: none; background: transparent; padding: 2px;">
+                                    style="padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer;">
                                     <option value="lite" {% if org.plan_type=='lite' %}selected{% endif %}>Lite</option>
                                     <option value="basic" {% if org.plan_type=='basic' %}selected{% endif %}>Básico
                                     </option>
