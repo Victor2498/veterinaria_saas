@@ -274,7 +274,11 @@
         <div class="modal-content">
             <h2>🔑 Cambiar Contraseña Maestro</h2>
             <div class="form-group">
-                <label>Nueva Contraseña</label>
+                <label>Contraseña Anterior</label>
+                <input type="password" id="oldPass" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>Nueva Contraseña Maestro</label>
                 <input type="password" id="newPass" placeholder="••••••••">
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -308,20 +312,22 @@
         }
 
         async function submitPasswordChange() {
+            const old_password = document.getElementById('oldPass').value;
             const new_password = document.getElementById('newPass').value;
-            if (!new_password) return alert('Ingresa una contraseña');
+            if (!old_password || !new_password) return alert('Ingresa ambas contraseñas');
 
             const res = await fetch('/superadmin/change_password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ new_password })
+                body: JSON.stringify({ old_password, new_password })
             });
 
             if (res.ok) {
                 alert('¡Contraseña de SuperAdmin actualizada!');
                 closePasswordModal();
             } else {
-                alert('Error al actualizar contraseña.');
+                const err = await res.json();
+                alert('Error: ' + (err.detail || 'No se pudo actualizar la contraseña.'));
             }
         }
 
