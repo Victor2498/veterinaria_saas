@@ -9,6 +9,7 @@ from src.services.media_logic import extract_media_base64
 from sqlalchemy import select
 import json
 import re
+import os
 from datetime import datetime
 from src.core.redis_client import redis_client
 from prompts import get_system_prompt
