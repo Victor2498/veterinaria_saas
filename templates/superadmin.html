@@ -143,6 +143,36 @@
         .badge-pro {
             background: #ec4899;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 2.5rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
     </style>
 </head>
 
@@ -150,7 +180,12 @@
     <div class="container">
         <div class="header">
             <h1>🛡️ SuperAdmin Control Center</h1>
-            <a href="/logout" style="color: var(--danger); text-decoration: none;">Cerrar Sesión</a>
+            <div style="display: flex; gap: 1.5rem; align-items: center;">
+                <a href="#" onclick="openPasswordModal()"
+                    style="color: var(--primary); text-decoration: none; font-weight: 600;">🔑 Cambiar Contraseña</a>
+                <a href="/logout" style="color: var(--danger); text-decoration: none; font-weight: 600;">🚪 Cerrar
+                    Sesión</a>
+            </div>
         </div>
 
         <div class="grid">
@@ -231,7 +266,52 @@
         </div>
     </div>
 
+    </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2>🔑 Cambiar Contraseña Maestro</h2>
+            <div class="form-group">
+                <label>Nueva Contraseña</label>
+                <input type="password" id="newPass" placeholder="••••••••">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitPasswordChange()">Guardar</button>
+                <button class="btn" style="flex: 1; background: #64748b; color: white;"
+                    onclick="closePasswordModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function openPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        async function submitPasswordChange() {
+            const new_password = document.getElementById('newPass').value;
+            if (!new_password) return alert('Ingresa una contraseña');
+
+            const res = await fetch('/superadmin/change_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_password })
+            });
+
+            if (res.ok) {
+                alert('¡Contraseña de SuperAdmin actualizada!');
+                closePasswordModal();
+            } else {
+                alert('Error al actualizar contraseña.');
+            }
+        }
+
         async function createOrg() {
             const data = {
                 name: document.getElementById('orgName').value,

@@ -120,3 +120,20 @@ async def upgrade_plan_request(plan_id: str, username: str = Depends(admin_requi
 
         payment_url = await create_plan_payment_link(org.slug, plan_id, price)
         return {"status": "success", "payment_url": payment_url}
+
+@router.post("/change_password")
+async def change_password(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    new_password = data.get("new_password")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="Se requiere nueva contraseña")
+        
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.username == username))
+        user = res.scalar()
+        if user:
+            from src.core.security import get_password_hash
+            user.password_hash = get_password_hash(new_password)
+            await session.commit()
+            return {"status": "success"}
+    return {"status": "error"}

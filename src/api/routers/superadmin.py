@@ -120,3 +120,20 @@ async def change_plan(org_id: int, request: Request, username: str = Depends(sup
             await redis_client.redis.delete(f"org:config:{org.slug}")
             
     return {"status": "success", "new_plan": new_plan}
+
+@router.post("/change_password")
+async def change_password(request: Request, username: str = Depends(superadmin_only)):
+    data = await request.json()
+    new_password = data.get("new_password")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="Se requiere nueva contraseña")
+        
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.username == username))
+        user = res.scalar()
+        if user:
+            from src.core.security import get_password_hash
+            user.password_hash = get_password_hash(new_password)
+            await session.commit()
+            return {"status": "success"}
+    return {"status": "error"}
