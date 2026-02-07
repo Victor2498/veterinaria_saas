@@ -164,3 +164,77 @@ async def change_password(request: Request, username: str = Depends(admin_requir
             await session.commit()
             return {"status": "success"}
     return {"status": "error"}
+
+@router.get("/export_history/{patient_id}")
+async def export_history(patient_id: int, username: str = Depends(admin_required)):
+    from fastapi.responses import StreamingResponse
+    from src.services.pdf_service import generate_clinical_history_pdf
+    from src.models.models import Patient, ClinicalRecord, Owner
+    
+    async with AsyncSessionLocal() as session:
+        # 1. Get user/org for security context
+        user_res = await session.execute(
+            select(User, Organization).join(Organization, User.org_id == Organization.id).where(User.username == username)
+        )
+        u_row = user_res.first()
+        if not u_row: raise HTTPException(status_code=401)
+        user, org = u_row
+
+        # 2. Get patient and ensure it belongs to this org
+        pat_res = await session.execute(
+            select(Patient, Owner).join(Owner, Patient.owner_id == Owner.id)
+            .where(Patient.id == patient_id, Patient.org_id == org.id)
+        )
+        p_row = pat_res.first()
+        if not p_row: raise HTTPException(status_code=404, detail="Paciente no encontrado")
+        patient, owner = p_row
+
+        # 3. Get records
+        rec_res = await session.execute(
+            select(ClinicalRecord).where(ClinicalRecord.patient_id == patient_id).order_by(ClinicalRecord.created_at.desc())
+        )
+        records = rec_res.scalars().all()
+
+        # 4. Generate PDF
+        pdf_buffer = generate_clinical_history_pdf(org.name, owner.name, patient.name, records)
+        
+        filename = f"Historia_{patient.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+@router.get("/export_vaccines/{patient_id}")
+async def export_vaccines(patient_id: int, username: str = Depends(admin_required)):
+    from fastapi.responses import StreamingResponse
+    from src.services.pdf_service import generate_vaccination_certificate
+    from src.models.models import Patient, Vaccination
+    
+    async with AsyncSessionLocal() as session:
+        user_res = await session.execute(
+            select(User, Organization).join(Organization, User.org_id == Organization.id).where(User.username == username)
+        )
+        u_row = user_res.first()
+        if not u_row: raise HTTPException(status_code=401)
+        user, org = u_row
+
+        pat_res = await session.execute(
+            select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
+        )
+        patient = pat_res.scalar()
+        if not patient: raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        vac_res = await session.execute(
+            select(Vaccination).where(Vaccination.patient_id == patient_id).order_by(Vaccination.date_administered.desc())
+        )
+        vaccinations = vac_res.scalars().all()
+
+        pdf_buffer = generate_vaccination_certificate(org.name, patient.name, vaccinations)
+        
+        filename = f"Vacunas_{patient.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
