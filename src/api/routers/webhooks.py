@@ -77,7 +77,11 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 audio_bytes = await extract_audio_bytes(data, audio_msg)
                 if audio_bytes:
                     temp_path = await save_temp_audio(audio_bytes, f"{phone}_{int(datetime.now().timestamp())}.ogg")
-                    user_input = await transcribe_audio_file(temp_path, api_key=org.openai_api_key)
+                    try:
+                        user_input = await transcribe_audio_file(temp_path, api_key=org.openai_api_key)
+                    finally:
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
             except Exception as e:
                 print(f"Audio error: {e}")
         elif message_type == "imageMessage":

@@ -20,6 +20,7 @@ async def init_db():
             ("patients", "breed", "VARCHAR"),
             ("patients", "birth_date", "TIMESTAMP WITH TIME ZONE"),
             ("patients", "weight", "FLOAT"),
+            ("patients", "height", "FLOAT"),
             ("patients", "sex", "VARCHAR"),
             ("clinical_records", "org_id", "INTEGER"),
             ("organizations", "is_active", "BOOLEAN DEFAULT TRUE"),
