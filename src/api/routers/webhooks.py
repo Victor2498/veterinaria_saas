@@ -42,6 +42,7 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 "evolution_api_key": org.evolution_api_key or os.getenv("EVOLUTION_API_KEY") or os.getenv("EVOLUTION_API_TOKEN"),
                 "evolution_instance": org.evolution_instance or os.getenv("INSTANCE_NAME"),
                 "openai_api_key": org.openai_api_key or os.getenv("OPENAI_API_KEY"),
+                "google_calendar_id": org.google_calendar_id,
                 "plan_type": org.plan_type or "pro" # Default to pro for testing if not set
             }
             await redis_client.set_org_config(org_slug, org_data)
