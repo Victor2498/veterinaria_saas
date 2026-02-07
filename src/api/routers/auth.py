@@ -21,9 +21,11 @@ async def login_handle(request: Request):
     password = form_data.get("password")
     
     async with AsyncSessionLocal() as session:
+        # Use outerjoin so Superadmins (org_id=None) can still login
+        from sqlalchemy import outerjoin
         res = await session.execute(
             select(User, Organization)
-            .join(Organization, User.org_id == Organization.id)
+            .outerjoin(Organization, User.org_id == Organization.id)
             .where(User.username == username)
         )
         row = res.first()
@@ -31,8 +33,12 @@ async def login_handle(request: Request):
         if row:
             user, org = row
             if verify_password(password, user.password_hash):
-                if not org.is_active:
-                    return templates.TemplateResponse("login.html", {"request": request, "error": "Esta organización está desactivada."})
+                # Only check is_active if it's NOT a superadmin (they are independent)
+                if not user.is_superadmin:
+                    if not org:
+                        return templates.TemplateResponse("login.html", {"request": request, "error": "Usuario sin organización asignada."})
+                    if not org.is_active:
+                        return templates.TemplateResponse("login.html", {"request": request, "error": "Esta organización está desactivada."})
                 
                 # Create JWT Token
                 access_token = create_access_token(data={"sub": username})

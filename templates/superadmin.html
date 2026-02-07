@@ -220,56 +220,107 @@
             </div>
 
             <!-- Main: Org List -->
-            <div class="card">
-                <h2>Clínicas Activas</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre / Slug</th>
-                            <th>Plan</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for org in organizations %}
-                        <tr>
-                            <td>
-                                <div><strong>{{ org.name }}</strong></div>
-                                <div style="font-size: 0.8rem; color: var(--text-dim);">/webhook/{{ org.slug }}</div>
-                            </td>
-                            <td>
-                                <select onchange="updatePlan({{ org.id }}, this.value, this)"
-                                    style="padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer;">
-                                    <option value="lite" {% if org.plan_type=='lite' %}selected{% endif %}>Lite</option>
-                                    <option value="basic" {% if org.plan_type=='basic' %}selected{% endif %}>Básico
-                                    </option>
-                                    <option value="pro" {% if org.plan_type=='pro' %}selected{% endif %}>Pro</option>
-                                </select>
-                            </td>
-                            <td>
-                                <span class="badge {% if org.is_active %}badge-lite{% else %}danger{% endif %}"
-                                    style="background: {{ 'var(--success)' if org.is_active else 'var(--danger)' }};">
-                                    {{ 'ACTIVA' if org.is_active else 'SUSPENDIDA' }}
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn btn-small" onclick="toggleStatus({{ org.id }})">
-                                    {{ 'Suspender' if org.is_active else 'Activar' }}
-                                </button>
-                                <button class="btn btn-small" style="background: var(--text-dim); margin-left: 0.5rem;"
-                                    onclick='openEditModal({{ org | tojson }})'>
-                                    ✏️ Editar
-                                </button>
-                                <button class="btn btn-small" style="background: var(--danger); margin-left: 0.5rem;"
-                                    onclick="confirmDeleteOrg({{ org.id }}, '{{ org.name }}')">
-                                    🗑️ Borrar
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="card">
+                    <h2>Clínicas Activas</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre / Slug</th>
+                                <th>Plan</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for org in organizations %}
+                            <tr>
+                                <td>
+                                    <div><strong>{{ org.name }}</strong></div>
+                                    <div style="font-size: 0.8rem; color: var(--text-dim);">/webhook/{{ org.slug }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <select onchange="updatePlan({{ org.id }}, this.value, this)"
+                                        style="padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer;">
+                                        <option value="lite" {% if org.plan_type=='lite' %}selected{% endif %}>Lite
+                                        </option>
+                                        <option value="basic" {% if org.plan_type=='basic' %}selected{% endif %}>Básico
+                                        </option>
+                                        <option value="pro" {% if org.plan_type=='pro' %}selected{% endif %}>Pro
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <span class="badge {% if org.is_active %}badge-lite{% else %}danger{% endif %}"
+                                        style="background: {{ 'var(--success)' if org.is_active else 'var(--danger)' }};">
+                                        {{ 'ACTIVA' if org.is_active else 'SUSPENDIDA' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-small" onclick="toggleStatus({{ org.id }})">
+                                        {{ 'Suspender' if org.is_active else 'Activar' }}
+                                    </button>
+                                    <button class="btn btn-small"
+                                        style="background: var(--text-dim); margin-left: 0.5rem;"
+                                        onclick='openEditModal({{ org | tojson }})'>
+                                        ✏️ Editar
+                                    </button>
+                                    <button class="btn btn-small"
+                                        style="background: var(--danger); margin-left: 0.5rem;"
+                                        onclick="confirmDeleteOrg({{ org.id }}, '{{ org.name }}')">
+                                        🗑️ Borrar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- NEW: User Management List -->
+                <div class="card">
+                    <h2>Gestión de Usuarios registrados</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Veterinaria</th>
+                                <th>Tipo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td><strong>{{ user.username }}</strong></td>
+                                <td>{{ user.org_name }}</td>
+                                <td>
+                                    <span class="badge"
+                                        style="background: {{ 'var(--primary)' if user.is_superadmin else '#64748b' }};">
+                                        {{ 'SUPERADMIN' if user.is_superadmin else 'ADMIN VET' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if not user.is_superadmin %}
+                                    <button class="btn btn-small" style="background: var(--text-dim);"
+                                        onclick="resetUserPassword({{ user.id }}, '{{ user.username }}')">
+                                        🔑 Reset Pass
+                                    </button>
+                                    <button class="btn btn-small"
+                                        style="background: var(--danger); margin-left: 0.5rem;"
+                                        onclick="deleteUser({{ user.id }}, '{{ user.username }}')">
+                                        🗑️ Borrar
+                                    </button>
+                                    {% else %}
+                                    <span style="color: var(--text-dim); font-size: 0.8rem;">(Protegido)</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -499,6 +550,28 @@
                     alert('Error de conexión o servidor');
                 }
             }
+        }
+
+        async function deleteUser(id, username) {
+            if (confirm(`🗑️ ¿Eliminar permanentemente al usuario "${username}"?`)) {
+                const res = await fetch(`/superadmin/delete_user/${id}`, { method: 'DELETE' });
+                if (res.ok) location.reload();
+                else alert('Error al eliminar usuario');
+            }
+        }
+
+        async function resetUserPassword(id, username) {
+            const newPass = prompt(`🔑 Ingresa la nueva contraseña para "${username}":`);
+            if (!newPass) return;
+
+            const res = await fetch(`/superadmin/reset_user_password/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: newPass })
+            });
+
+            if (res.ok) alert('Contraseña actualizada correctamente');
+            else alert('Error al actualizar contraseña');
         }
     </script>
 </body>

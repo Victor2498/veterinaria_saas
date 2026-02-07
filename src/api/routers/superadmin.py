@@ -82,10 +82,29 @@ async def superadmin_panel(request: Request, username: str = Depends(superadmin_
                 "openai_api_key": org.openai_api_key
             }
             orgs_data.append(org_dict)
+        
+        # Fetch all users with their org names
+        from sqlalchemy import outerjoin
+        users_res = await session.execute(
+            select(User, Organization.name)
+            .outerjoin(Organization, User.org_id == Organization.id)
+            .order_by(User.id)
+        )
+        users = users_res.all()
+        
+        users_data = []
+        for user_obj, org_name in users:
+            users_data.append({
+                "id": user_obj.id,
+                "username": user_obj.username,
+                "is_superadmin": user_obj.is_superadmin,
+                "org_name": org_name or "N/A (SuperAdmin)"
+            })
             
         return templates.TemplateResponse("superadmin.html", {
             "request": request, 
             "organizations": orgs_data,
+            "users": users_data,
             "username": username
         })
 
@@ -184,4 +203,39 @@ async def update_org(org_id: int, request: Request, username: str = Depends(supe
         from src.core.redis_client import redis_client
         await redis_client.redis.delete(f"org:config:{org.slug}")
         
+    return {"status": "success"}
+
+@router.delete("/delete_user/{user_id}")
+async def delete_user(user_id: int, username: str = Depends(superadmin_only)):
+    """Elimina un usuario (No se puede eliminar al propio superadmin activo)"""
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.id == user_id))
+        user = res.scalar()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        if user.username == username:
+            raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo")
+            
+        await session.delete(user)
+        await session.commit()
+    return {"status": "success"}
+
+@router.post("/reset_user_password/{user_id}")
+async def reset_user_password(user_id: int, request: Request, username: str = Depends(superadmin_only)):
+    """Resetea la contraseña de un usuario de veterinaria"""
+    data = await request.json()
+    new_password = data.get("password")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="Se requiere nueva contraseña")
+        
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(User).where(User.id == user_id))
+        user = res.scalar()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            
+        from src.core.security import get_password_hash
+        user.password_hash = get_password_hash(new_password)
+        await session.commit()
     return {"status": "success"}
