@@ -261,6 +261,10 @@
                                     onclick='openEditModal({{ org | tojson }})'>
                                     ✏️ Editar
                                 </button>
+                                <button class="btn btn-small" style="background: var(--danger); margin-left: 0.5rem;"
+                                    onclick="confirmDeleteOrg({{ org.id }}, '{{ org.name }}')">
+                                    🗑️ Borrar
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -477,6 +481,23 @@
                 location.reload();
             } else {
                 alert('Error al actualizar la organización');
+            }
+        }
+
+        async function confirmDeleteOrg(id, name) {
+            if (confirm(`⚠️ ¿ESTÁS SEGURO?\n\nVas a eliminar permanentemente la veterinaria "${name}" y TODOS sus datos (pacientes, dueños, historial).\n\nEsta acción NO se puede deshacer.`)) {
+                try {
+                    const res = await fetch(`/superadmin/delete_org/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        alert('Veterinaria eliminada con éxito.');
+                        location.reload();
+                    } else {
+                        const err = await res.json();
+                        alert('Error: ' + (err.detail || 'No se pudo eliminar'));
+                    }
+                } catch (e) {
+                    alert('Error de conexión o servidor');
+                }
             }
         }
     </script>
