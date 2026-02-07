@@ -450,9 +450,10 @@
                                         Historia</button>
                                     {% endif %}
 
-                                    <a href="/admin/export_vaccines/{{ row.Patient.id }}" class="btn"
-                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--secondary);">💉
-                                        Certificado</a>
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
+                                        onclick="openEditPatientModal({{ row.Patient.id }}, '{{ row.Patient.name }}', '{{ row.Patient.species }}', '{{ row.Patient.breed or '' }}', '{{ row.Patient.birth_date.strftime('%Y-%m-%d') if row.Patient.birth_date else '' }}', '{{ row.Patient.weight or '' }}', '{{ row.Patient.height or '' }}', '{{ row.Patient.sex or '' }}')">
+                                        ✏️ Editar</button>
                                 </div>
                             </td>
                         </tr>
