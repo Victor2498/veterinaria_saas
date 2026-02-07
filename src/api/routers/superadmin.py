@@ -67,9 +67,25 @@ async def superadmin_panel(request: Request, username: str = Depends(superadmin_
         orgs_res = await session.execute(select(Organization).order_by(Organization.id))
         orgs = orgs_res.scalars().all()
         
+        # Convert to dicts for JSON serialization in template
+        orgs_data = []
+        for org in orgs:
+            org_dict = {
+                "id": org.id,
+                "name": org.name,
+                "slug": org.slug,
+                "is_active": org.is_active,
+                "plan_type": org.plan_type,
+                "evolution_api_url": org.evolution_api_url,
+                "evolution_api_key": org.evolution_api_key,
+                "evolution_instance": org.evolution_instance,
+                "openai_api_key": org.openai_api_key
+            }
+            orgs_data.append(org_dict)
+            
         return templates.TemplateResponse("superadmin.html", {
             "request": request, 
-            "organizations": orgs,
+            "organizations": orgs_data,
             "username": username
         })
 
