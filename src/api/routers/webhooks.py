@@ -120,7 +120,9 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 for v in vacs:
                     vaccine_info += f"- {v.vaccine_name}: {v.date_administered.strftime('%d/%m/%Y')}\n"
 
-        system_msg = f"{get_system_prompt()}\n\nCONTEXTO: Clínica {org.name}.\nHoy es {datetime.now().strftime('%A, %d de %B de %Y')}.{vaccine_info}"
+        from datetime import timedelta
+        arg_now = datetime.utcnow() - timedelta(hours=3)
+        system_msg = f"{get_system_prompt()}\n\nCONTEXTO: Clínica {org.name}.\nHoy es {arg_now.strftime('%A, %d de %B de %Y')}.{vaccine_info}"
         
         messages = [{"role": "system", "content": system_msg}]
         messages.extend(history)

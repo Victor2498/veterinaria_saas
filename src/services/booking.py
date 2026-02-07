@@ -8,6 +8,24 @@ from src.core.database import AsyncSessionLocal
 from src.models.models import Appointment, Owner, Patient, Vaccination, Organization
 from sqlalchemy import select
 
+def format_arg_date(date_str: str) -> str:
+    """Convierte formato ISO/Internacional a formato Argentino (DD/MM/YYYY HH:MM)"""
+    try:
+        # Limpiar la cadena de posibles espacios extra
+        date_str = date_str.strip()
+        # Manejar formatos comunes
+        for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S"):
+            try:
+                dt = datetime.strptime(date_str, fmt)
+                return dt.strftime("%d/%m/%Y %H:%M")
+            except ValueError:
+                continue
+        # Si ya viene en ISO o algo similar
+        dt = datetime.fromisoformat(date_str.replace(" ", "T"))
+        return dt.strftime("%d/%m/%Y %H:%M")
+    except:
+        return date_str
+
 async def save_db_record(data: Dict[str, Any], org: Organization):
     """Guarda el registro en PostgreSQL usando la configuración de la organización."""
     try:
@@ -56,7 +74,8 @@ async def save_db_record(data: Dict[str, Any], org: Organization):
                 else:
                     dt_obj = datetime.fromisoformat(date_str.replace(" ", "T"))
             except:
-                dt_obj = datetime.now()
+                from datetime import timedelta
+                dt_obj = datetime.utcnow() - timedelta(hours=3)
 
             appointment = Appointment(
                 org_id=org.id,
@@ -78,12 +97,14 @@ async def notify_owner_whatsapp(data: Dict[str, Any], org: Organization):
     clinic_owner_phone = os.getenv("CLINIC_OWNER_PHONE")
     if not clinic_owner_phone: return
     
+    formatted_date = format_arg_date(data.get('date_time', ''))
+    
     message = (
         f"🚨 *NUEVO TURNO CONFIRMADO* 🚨\n"
         f"🏥 *Clínica:* {org.name}\n"
         f"🐶 *Paciente:* {data['pet_name']}\n"
         f"👤 *Dueño:* {data['owner_name']}\n"
-        f"📅 *Fecha:* {data['date_time']}\n"
+        f"📅 *Fecha:* {formatted_date}\n"
     )
 
     await send_whatsapp_message(
