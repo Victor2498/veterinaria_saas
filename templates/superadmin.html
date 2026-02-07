@@ -257,6 +257,10 @@
                                 <button class="btn btn-small" onclick="toggleStatus({{ org.id }})">
                                     {{ 'Suspender' if org.is_active else 'Activar' }}
                                 </button>
+                                <button class="btn btn-small" style="background: var(--text-dim); margin-left: 0.5rem;"
+                                    onclick='openEditModal({{ org | tojson }})'>
+                                    ✏️ Editar
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -285,6 +289,44 @@
                 <button class="btn btn-primary" style="flex: 1;" onclick="submitPasswordChange()">Guardar</button>
                 <button class="btn" style="flex: 1; background: #64748b; color: white;"
                     onclick="closePasswordModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Edit Org Modal -->
+    <div id="editOrgModal" class="modal">
+        <div class="modal-content">
+            <h2>✏️ Editar Veterinaria</h2>
+            <input type="hidden" id="editOrgId">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>Slug (URL)</label>
+                <input type="text" id="editSlug">
+            </div>
+            <div class="form-group">
+                <label>Evolution API URL</label>
+                <input type="text" id="editEvoUrl">
+            </div>
+            <div class="form-group">
+                <label>Evolution API Key</label>
+                <input type="password" id="editEvoKey">
+            </div>
+            <div class="form-group">
+                <label>Evolution Instance</label>
+                <input type="text" id="editEvoInstance">
+            </div>
+            <div class="form-group">
+                <label>OpenAI API Key</label>
+                <input type="password" id="editOpenAiKey">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitEditOrg()">Guardar Cambios</button>
+                <button class="btn" style="flex: 1; background: #64748b; color: white;"
+                    onclick="closeEditModal()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -397,6 +439,45 @@
         async function toggleStatus(id) {
             await fetch(`/superadmin/toggle_org/${id}`, { method: 'POST' });
             location.reload();
+        }
+
+        function openEditModal(org) {
+            document.getElementById('editOrgId').value = org.id;
+            document.getElementById('editName').value = org.name || '';
+            document.getElementById('editSlug').value = org.slug || '';
+            document.getElementById('editEvoUrl').value = org.evolution_api_url || '';
+            document.getElementById('editEvoKey').value = org.evolution_api_key || '';
+            document.getElementById('editEvoInstance').value = org.evolution_instance || '';
+            document.getElementById('editOpenAiKey').value = org.openai_api_key || ''; // Be careful with exposing this
+            document.getElementById('editOrgModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editOrgModal').style.display = 'none';
+        }
+
+        async function submitEditOrg() {
+            const id = document.getElementById('editOrgId').value;
+            const data = {
+                name: document.getElementById('editName').value,
+                slug: document.getElementById('editSlug').value,
+                evolution_api_url: document.getElementById('editEvoUrl').value,
+                evolution_api_key: document.getElementById('editEvoKey').value,
+                evolution_instance: document.getElementById('editEvoInstance').value,
+                openai_api_key: document.getElementById('editOpenAiKey').value
+            };
+
+            const res = await fetch(`/superadmin/update_org/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Error al actualizar la organización');
+            }
         }
     </script>
 </body>

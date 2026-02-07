@@ -142,3 +142,30 @@ async def change_password(request: Request, username: str = Depends(superadmin_o
             await session.commit()
             return {"status": "success"}
     return {"status": "error"}
+
+@router.post("/update_org/{org_id}")
+async def update_org(org_id: int, request: Request, username: str = Depends(superadmin_only)):
+    """Actualiza los datos de una veterinaria"""
+    data = await request.json()
+    
+    async with AsyncSessionLocal() as session:
+        org_res = await session.execute(select(Organization).where(Organization.id == org_id))
+        org = org_res.scalar()
+        if not org:
+            raise HTTPException(status_code=404, detail="Organización no encontrada")
+            
+        # Update fields
+        if "name" in data: org.name = data["name"]
+        if "slug" in data: org.slug = data["slug"]
+        if "evolution_api_url" in data: org.evolution_api_url = data["evolution_api_url"]
+        if "evolution_api_key" in data: org.evolution_api_key = data["evolution_api_key"]
+        if "evolution_instance" in data: org.evolution_instance = data["evolution_instance"]
+        if "openai_api_key" in data: org.openai_api_key = data["openai_api_key"]
+        
+        await session.commit()
+        
+        # Invalidate cache
+        from src.core.redis_client import redis_client
+        await redis_client.redis.delete(f"org:config:{org.slug}")
+        
+    return {"status": "success"}
