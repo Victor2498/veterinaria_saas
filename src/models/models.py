@@ -55,6 +55,7 @@ class Patient(Base):
     breed = Column(String, nullable=True)
     birth_date = Column(DateTime(timezone=True), nullable=True)
     weight = Column(Float, nullable=True)
+    height = Column(Float, nullable=True) # Altura en cm
     sex = Column(String, nullable=True)
 
 class ClinicalRecord(Base):

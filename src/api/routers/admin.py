@@ -203,21 +203,19 @@ async def export_history(patient_id: int, username: str = Depends(admin_required
         # 4. Generate PDF
         pdf_buffer = generate_clinical_history_pdf(org.name, owner.name, patient.name, records)
         
-        filename = f"Historia_{patient.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        filename = f"Vacunas_{patient.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
         return StreamingResponse(
             pdf_buffer, 
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
 
-@router.get("/export_vaccines/{patient_id}")
-async def export_vaccines(patient_id: int, username: str = Depends(admin_required)):
-    from fastapi.responses import StreamingResponse
-    from src.services.pdf_service import generate_vaccination_certificate
-    from src.models.models import Patient, Vaccination
-    from src.core.security import check_plan_feature
+@router.post("/update_patient/{patient_id}")
+async def update_patient(patient_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
     
     async with AsyncSessionLocal() as session:
+        # Get user/org for security
         user_res = await session.execute(
             select(User, Organization).join(Organization, User.org_id == Organization.id).where(User.username == username)
         )
@@ -225,26 +223,30 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         if not u_row: raise HTTPException(status_code=401)
         user, org = u_row
 
-        # 🛡️ Seguridad SaaS: Verificar si el plan permite certificados (Basic+)
-        if not check_plan_feature(org.plan_type, "export_vaccines"):
-            raise HTTPException(status_code=403, detail="Tu plan Lite no permite exportar certificados. Mejora a Basic para activar esta función.")
-
+        # Get patient and ensure it belongs to this org
         pat_res = await session.execute(
             select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
         )
         patient = pat_res.scalar()
         if not patient: raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
-        vac_res = await session.execute(
-            select(Vaccination).where(Vaccination.patient_id == patient_id).order_by(Vaccination.date_administered.desc())
-        )
-        vaccinations = vac_res.scalars().all()
-
-        pdf_buffer = generate_vaccination_certificate(org.name, patient.name, vaccinations)
+        # Update fields
+        patient.name = data.get("name")
+        patient.species = data.get("species")
+        patient.breed = data.get("breed")
+        patient.weight = float(data.get("weight")) if data.get("weight") else None
+        patient.height = float(data.get("height")) if data.get("height") else None
+        patient.sex = data.get("sex")
         
-        filename = f"Vacunas_{patient.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
-        return StreamingResponse(
-            pdf_buffer, 
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+        # Handle birth_date correctly
+        bd_str = data.get("birth_date")
+        if bd_str:
+            try:
+                patient.birth_date = datetime.strptime(bd_str, "%Y-%m-%d")
+            except:
+                pass # Or handle error
+        else:
+            patient.birth_date = None
+
+        await session.commit()
+        return {"status": "success", "message": "Datos del paciente actualizados"}
