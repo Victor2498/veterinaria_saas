@@ -122,7 +122,10 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
 
         from datetime import timedelta
         arg_now = datetime.utcnow() - timedelta(hours=3)
-        system_msg = f"{get_system_prompt()}\n\nCONTEXTO: Clínica {org.name}.\nHoy es {arg_now.strftime('%A, %d de %B de %Y')}.{vaccine_info}"
+        dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        fecha_es = f"{dias[arg_now.weekday()]}, {arg_now.day} de {meses[arg_now.month-1]} de {arg_now.year}"
+        system_msg = f"{get_system_prompt()}\n\nCONTEXTO: Clínica {org.name}.\nHoy es {fecha_es}.\n{vaccine_info}"
         
         messages = [{"role": "system", "content": system_msg}]
         messages.extend(history)

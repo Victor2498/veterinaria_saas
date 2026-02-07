@@ -9,20 +9,22 @@ from src.models.models import Appointment, Owner, Patient, Vaccination, Organiza
 from sqlalchemy import select
 
 def format_arg_date(date_str: str) -> str:
-    """Convierte formato ISO/Internacional a formato Argentino (DD/MM/YYYY HH:MM)"""
+    """Convierte fecha a formato Argentino y día en Español (Ej: Lunes 10/02 15:00)"""
+    dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
     try:
-        # Limpiar la cadena de posibles espacios extra
         date_str = date_str.strip()
-        # Manejar formatos comunes
+        dt = None
         for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S"):
             try:
                 dt = datetime.strptime(date_str, fmt)
-                return dt.strftime("%d/%m/%Y %H:%M")
-            except ValueError:
-                continue
-        # Si ya viene en ISO o algo similar
-        dt = datetime.fromisoformat(date_str.replace(" ", "T"))
-        return dt.strftime("%d/%m/%Y %H:%M")
+                break
+            except: continue
+        
+        if not dt:
+            dt = datetime.fromisoformat(date_str.replace(" ", "T"))
+        
+        nombre_dia = dias[dt.weekday()]
+        return f"{nombre_dia} {dt.strftime('%d/%m/%Y %H:%M')}"
     except:
         return date_str
 
@@ -123,7 +125,7 @@ async def master_booking_flow(appointment_data: Dict[str, Any], org: Organizatio
             pet_name=appointment_data['pet_name'],
             owner_name=appointment_data['owner_name'],
             date_time_str=appointment_data['date_time'],
-            calendar_id=org.google_calendar_id
+            calendar_id=getattr(org, "google_calendar_id", None)
         ),
         notify_owner_whatsapp(appointment_data, org)
     )
