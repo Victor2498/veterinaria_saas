@@ -79,7 +79,8 @@ async def superadmin_panel(request: Request, username: str = Depends(superadmin_
                 "evolution_api_url": org.evolution_api_url,
                 "evolution_api_key": org.evolution_api_key,
                 "evolution_instance": org.evolution_instance,
-                "openai_api_key": org.openai_api_key
+                "openai_api_key": org.openai_api_key,
+                "google_calendar_id": org.google_calendar_id
             }
             orgs_data.append(org_dict)
         
@@ -196,6 +197,7 @@ async def update_org(org_id: int, request: Request, username: str = Depends(supe
         if "evolution_api_key" in data: org.evolution_api_key = data["evolution_api_key"]
         if "evolution_instance" in data: org.evolution_instance = data["evolution_instance"]
         if "openai_api_key" in data: org.openai_api_key = data["openai_api_key"]
+        if "google_calendar_id" in data: org.google_calendar_id = data["google_calendar_id"]
         
         await session.commit()
         

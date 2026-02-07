@@ -15,6 +15,7 @@ class Organization(Base):
     evolution_instance = Column(String, nullable=True) # Nombre de la instancia (ej: DogBot)
     openai_api_key = Column(String, nullable=True) # Opcional: llave propia por org
     plan_type = Column(String, default="basic") # basic, pro, premium
+    google_calendar_id = Column(String, nullable=True) # ID del calendario de Google (gmail o ID repo)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

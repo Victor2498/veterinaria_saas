@@ -44,40 +44,32 @@ async def init_db():
                 print(f"Skipping alteration for {table}.{col}: {e}")
                 await session.rollback()
 
-    # --- WIPE DATA (Optional: Can be toggleable) ---
+    # Seed (Only if not already seeded)
     async with AsyncSessionLocal() as session:
-        # Tables to wipe in order to respect foreign keys
-        tables_to_wipe = [
-            "vaccinations", "clinical_records", "appointments", 
-            "patients", "owners", "services", "users", "organizations"
-        ]
-        print("🧹 Starting total system wipe...")
-        for table in tables_to_wipe:
-            try:
-                await session.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
-                print(f"   Deleted all data from {table}")
-            except Exception as e:
-                print(f"   Error wiping {table}: {e}")
-        await session.commit()
+        # 1. Check if we have any organizations, if not create default
+        org_check = await session.execute(select(Organization).limit(1))
+        if not org_check.scalar():
+            print("🌱 Seeding default organization...")
+            default_org = Organization(name="Veterinaria Central", slug="central")
+            session.add(default_org)
+            await session.commit()
+            await session.refresh(default_org)
+        else:
+            default_org = (await session.execute(select(Organization).where(Organization.slug == "central"))).scalar()
 
-    # Seed
-    async with AsyncSessionLocal() as session:
-        # 1. Create Default Org for SuperAdmin
-        default_org = Organization(name="Veterinaria Central", slug="central")
-        session.add(default_org)
-        await session.commit()
-        await session.refresh(default_org)
-
-        # 2. Create ONLY the SuperAdmin
-        super_pwd = "admin123456" # Predeterminada solicitada por el usuario
-        new_user = User(
-            username="superadmin",
-            password_hash=get_password_hash(super_pwd),
-            org_id=default_org.id,
-            is_admin=True,
-            is_superadmin=True
-        )
-        session.add(new_user)
-        print(f"✅ System reset complete. SuperAdmin created with username 'superadmin' and password '{super_pwd}'.")
-        
-        await session.commit()
+        # 2. Check if superadmin exists, if not create
+        user_check = await session.execute(select(User).where(User.username == "superadmin"))
+        if not user_check.scalar():
+            super_pwd = "admin123456" 
+            new_user = User(
+                username="superadmin",
+                password_hash=get_password_hash(super_pwd),
+                org_id=default_org.id if default_org else None,
+                is_admin=True,
+                is_superadmin=True
+            )
+            session.add(new_user)
+            await session.commit()
+            print(f"✅ SuperAdmin created with username 'superadmin' and password '{super_pwd}'.")
+        else:
+            print("ℹ️ Superadmin already exists. Skipping seed.")

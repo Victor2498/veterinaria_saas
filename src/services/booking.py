@@ -101,8 +101,8 @@ async def master_booking_flow(appointment_data: Dict[str, Any], org: Organizatio
         create_calendar_event(
             pet_name=appointment_data['pet_name'],
             owner_name=appointment_data['owner_name'],
-            date_time_str=appointment_data['date_time']
-            # Para SaaS, cada Org debería tener su propio Google Calendar OAuth o Service Account
+            date_time_str=appointment_data['date_time'],
+            calendar_id=org.google_calendar_id
         ),
         notify_owner_whatsapp(appointment_data, org)
     )
