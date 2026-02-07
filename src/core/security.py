@@ -69,3 +69,28 @@ async def ui_access_required(username: str = Depends(admin_required)):
              # but not the dashboard/patients/etc.
              return "lite_restricted" 
         return "full_access"
+def check_plan_feature(current_plan: str, required_feature: str) -> bool:
+    """Centralized logic to check if a plan has access to a feature."""
+    hierarchy = ["lite", "basic", "pro", "premium"]
+    
+    # Normalizamos planes Pro y Premium como iguales
+    plan_rank = {
+        "lite": 0,
+        "basic": 1,
+        "pro": 2,
+        "premium": 2 # Mismo nivel que Pro
+    }
+    
+    # Definición de requerimientos mínimos
+    feature_requirements = {
+        "admin_dashboard": 1,        # Basic+
+        "patient_management": 1,     # Basic+
+        "export_vaccines": 1,        # Basic+
+        "export_history": 2,         # Pro+
+        "custom_bot_ai": 2           # Pro+
+    }
+    
+    required_rank = feature_requirements.get(required_feature, 99)
+    current_rank = plan_rank.get(current_plan.lower(), 0)
+    
+    return current_rank >= required_rank

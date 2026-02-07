@@ -170,6 +170,7 @@ async def export_history(patient_id: int, username: str = Depends(admin_required
     from fastapi.responses import StreamingResponse
     from src.services.pdf_service import generate_clinical_history_pdf
     from src.models.models import Patient, ClinicalRecord, Owner
+    from src.core.security import check_plan_feature
     
     async with AsyncSessionLocal() as session:
         # 1. Get user/org for security context
@@ -179,6 +180,10 @@ async def export_history(patient_id: int, username: str = Depends(admin_required
         u_row = user_res.first()
         if not u_row: raise HTTPException(status_code=401)
         user, org = u_row
+
+        # 🛡️ Seguridad SaaS: Verificar si el plan permite exportar historia (Pro/Premium)
+        if not check_plan_feature(org.plan_type, "export_history"):
+            raise HTTPException(status_code=403, detail="Tu plan actual no permite exportar Historias Clínicas. Mejora a PRO para activar esta función.")
 
         # 2. Get patient and ensure it belongs to this org
         pat_res = await session.execute(
@@ -210,6 +215,7 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
     from fastapi.responses import StreamingResponse
     from src.services.pdf_service import generate_vaccination_certificate
     from src.models.models import Patient, Vaccination
+    from src.core.security import check_plan_feature
     
     async with AsyncSessionLocal() as session:
         user_res = await session.execute(
@@ -218,6 +224,10 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         u_row = user_res.first()
         if not u_row: raise HTTPException(status_code=401)
         user, org = u_row
+
+        # 🛡️ Seguridad SaaS: Verificar si el plan permite certificados (Basic+)
+        if not check_plan_feature(org.plan_type, "export_vaccines"):
+            raise HTTPException(status_code=403, detail="Tu plan Lite no permite exportar certificados. Mejora a Basic para activar esta función.")
 
         pat_res = await session.execute(
             select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
