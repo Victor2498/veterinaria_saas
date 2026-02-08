@@ -288,6 +288,91 @@
             font-size: 0.7rem;
             font-weight: 700;
         }
+
+        /* Modal Base */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 2.5rem;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
     </style>
 </head>
 
@@ -361,7 +446,7 @@
                         {% for row in recent_appointments %}
                         <tr>
                             <td><strong style="cursor: pointer; color: var(--primary);"
-                                    onclick="navigateToPatient({{ row.Patient.id if row.Patient else 'null' }}, '{{ row.Appointment.pet_name }}')">
+                                    onclick="navigateToPatient('{{ row.Patient.id if row.Patient else '' }}', '{{ row.Appointment.pet_name }}')">
                                     {{ row.Appointment.pet_name }}</strong></td>
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
@@ -397,7 +482,7 @@
                         {% for row in all_appointments %}
                         <tr>
                             <td><strong style="cursor: pointer; color: var(--primary);"
-                                    onclick="navigateToPatient({{ row.Patient.id if row.Patient else 'null' }}, '{{ row.Appointment.pet_name }}')">
+                                    onclick="navigateToPatient('{{ row.Patient.id if row.Patient else '' }}', '{{ row.Appointment.pet_name }}')">
                                     {{ row.Appointment.pet_name }}</strong></td>
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.reason or 'Consulta General' }}</td>
@@ -435,7 +520,7 @@
                         <tr>
                             <td>
                                 <strong style="cursor: pointer; color: var(--primary);"
-                                    onclick="openEditPatientModal({{ row.Patient.id }}, '{{ row.Patient.name }}', '{{ row.Patient.species }}', '{{ row.Patient.breed or '' }}', '{{ row.Patient.birth_date.strftime('%Y-%m-%d') if row.Patient.birth_date else '' }}', '{{ row.Patient.weight or '' }}', '{{ row.Patient.height or '' }}', '{{ row.Patient.sex or '' }}')">
+                                    onclick="openEditPatientModal('{{ row.Patient.id }}')">
                                     {{ row.Patient.name }}</strong><br>
                                 <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Patient.sex or 'No
                                     especificado' }}</span>

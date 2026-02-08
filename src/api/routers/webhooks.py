@@ -132,6 +132,25 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         
         # Preparar Prompt con Identidad y Disponibilidad
         system_base = get_system_prompt().replace("[CLINICA_NOMBRE]", org.name)
+        
+        # --- NUEVO: Restaurar Inicio Estructurado ---
+        greetings = ["hola", "buen día", "buenas tardes", "buenas noches", "inicio", "comenzar", "menu", "menú"]
+        is_greeting = user_input.lower().strip() in greetings
+        if not history and is_greeting:
+            welcome_text = (
+                f"¡Hola! 🐾 Bienvenido a {org.name}. Soy tu asistente virtual.\n"
+                "¿En qué puedo ayudarte hoy?\n\n"
+                "1. 📅 *Agendar Cita*\n"
+                "2. 💰 *Precios*\n"
+                "3. 🩺 *Plan de Vacunación*\n"
+                "4. 💊 *Pedidos*"
+            )
+            await send_whatsapp_message(phone, welcome_text, 
+                api_url=org.evolution_api_url, api_key=org.evolution_api_key, instance_name=org.evolution_instance)
+            await redis_client.save_history(phone, [{"role": "user", "content": user_input}, {"role": "assistant", "content": welcome_text}])
+            return {"status": "welcomed"}
+        # ---------------------------------------------
+
         system_msg = (
             f"{system_base}\n\n"
             f"IDENTIDAD ACTUAL: Estás atendiendo para la clínica '{org.name}'.\n"
