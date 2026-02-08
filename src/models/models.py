@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint
 from sqlalchemy.sql import func
 from src.core.database import Base
 
@@ -41,23 +41,27 @@ class Owner(Base):
     __tablename__ = "owners"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    phone_number = Column(String, index=True)
-    name = Column(String, nullable=True)
+    phone_number = Column(String, index=True) # Index for fast owner lookup
+    name = Column(String, nullable=True, index=True) # Index for name search
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    __table_args__ = (UniqueConstraint('org_id', 'phone_number', name='_org_phone_uc'),)
 
 class Patient(Base):
     __tablename__ = "patients"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    name = Column(String, index=True)
+    name = Column(String, index=True) # Index for fast patient search
     species = Column(String) 
-    owner_id = Column(Integer, ForeignKey("owners.id"))
+    owner_id = Column(Integer, ForeignKey("owners.id"), index=True)
     medical_history_link = Column(String, nullable=True)
     breed = Column(String, nullable=True)
     birth_date = Column(DateTime(timezone=True), nullable=True)
     weight = Column(Float, nullable=True)
     height = Column(Float, nullable=True) # Altura en cm
     sex = Column(String, nullable=True)
+    
+    __table_args__ = (UniqueConstraint('org_id', 'owner_id', 'name', name='_org_owner_pet_uc'),)
 
 class ClinicalRecord(Base):
     __tablename__ = "clinical_records"
@@ -73,18 +77,18 @@ class Vaccination(Base):
     __tablename__ = "vaccinations"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"))
-    vaccine_name = Column(String)
+    patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
+    vaccine_name = Column(String, index=True)
     date_administered = Column(DateTime(timezone=True), server_default=func.now())
-    next_dose_date = Column(DateTime(timezone=True), nullable=True)
+    next_dose_date = Column(DateTime(timezone=True), nullable=True, index=True)
 
 class Appointment(Base):
     __tablename__ = "appointments"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    pet_name = Column(String)
+    pet_name = Column(String, index=True)
     reason = Column(String, nullable=True)
-    owner_id = Column(Integer, ForeignKey("owners.id"))
-    date = Column(DateTime(timezone=True))
-    status = Column(String, default="confirmed")
+    owner_id = Column(Integer, ForeignKey("owners.id"), index=True)
+    date = Column(DateTime(timezone=True), index=True)
+    status = Column(String, default="confirmed", index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

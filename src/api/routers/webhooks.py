@@ -10,8 +10,9 @@ from sqlalchemy import select
 import json
 import re
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.core.redis_client import redis_client
+from src.services.scheduling import get_formatted_availability
 from prompts import get_system_prompt
 
 router = APIRouter()
@@ -125,7 +126,19 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
         meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         fecha_es = f"{dias[arg_now.weekday()]}, {arg_now.day} de {meses[arg_now.month-1]} de {arg_now.year}"
-        system_msg = f"{get_system_prompt()}\n\nCONTEXTO: Clínica {org.name}.\nHoy es {fecha_es}.\n{vaccine_info}"
+        
+        # Disponibilidad real
+        availability_text = await get_formatted_availability(org.id)
+        
+        # Preparar Prompt con Identidad y Disponibilidad
+        system_base = get_system_prompt().replace("[CLINICA_NOMBRE]", org.name)
+        system_msg = (
+            f"{system_base}\n\n"
+            f"IDENTIDAD ACTUAL: Estás atendiendo para la clínica '{org.name}'.\n"
+            f"FECHA ACTUAL: Hoy es {fecha_es}.\n"
+            f"HORARIOS DISPONIBLES:\n{availability_text}\n"
+            f"{vaccine_info}"
+        )
         
         messages = [{"role": "system", "content": system_msg}]
         messages.extend(history)

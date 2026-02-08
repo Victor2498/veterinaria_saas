@@ -63,18 +63,25 @@ async def save_db_record(data: Dict[str, Any], org: Organization):
                 session.add(patient)
                 await session.flush()
 
-            # Parsear fecha
+            # Parsear fecha de forma robusta
+            date_str = data.get('date_time', '')
+            dt_obj = None
             try:
-                date_str = data.get('date_time', '')
-                import re
-                date_match = re.search(r"(\d{4}-\d{2}-\d{2}|\d{2}-\d{2})[ T](\d{2}:\d{2})", date_str)
-                if date_match:
-                    found_date = date_match.group(1)
-                    found_time = date_match.group(2)
-                    if len(found_date) == 5: found_date = f"{datetime.now().year}-{found_date}"
-                    dt_obj = datetime.fromisoformat(f"{found_date}T{found_time}")
-                else:
-                    dt_obj = datetime.fromisoformat(date_str.replace(" ", "T"))
+                # Intentar varios formatos comunes
+                for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+                    try:
+                        dt_obj = datetime.strptime(date_str, fmt)
+                        break
+                    except: continue
+                
+                if not dt_obj:
+                    # Fallback para fechas parciales (Ej: "2026-02-10 15:00")
+                    import re
+                    match = re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", date_str)
+                    if match:
+                        dt_obj = datetime.fromisoformat(f"{match.group(1)}T{match.group(2)}")
+                    else:
+                        dt_obj = datetime.fromisoformat(date_str.replace(" ", "T"))
             except:
                 from datetime import timedelta
                 dt_obj = datetime.utcnow() - timedelta(hours=3)
