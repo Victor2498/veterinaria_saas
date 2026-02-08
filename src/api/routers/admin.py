@@ -250,3 +250,151 @@ async def update_patient(patient_id: int, request: Request, username: str = Depe
 
         await session.commit()
         return {"status": "success", "message": "Datos del paciente actualizados"}
+
+@router.get("/patient_data/{patient_id}")
+async def get_patient_detail_data(patient_id: int, username: str = Depends(admin_required)):
+    async with AsyncSessionLocal() as session:
+        # Get org
+        row = await get_org(username, session)
+        if not row: raise HTTPException(status_code=404)
+        user, org = row
+
+        # Get patient
+        pat_res = await session.execute(
+            select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
+        )
+        patient = pat_res.scalar()
+        if not patient: raise HTTPException(status_code=404)
+
+        # Get records
+        rec_res = await session.execute(
+            select(ClinicalRecord).where(ClinicalRecord.patient_id == patient_id).order_by(ClinicalRecord.created_at.desc())
+        )
+        records = rec_res.scalars().all()
+
+        # Get vaccinations
+        vac_res = await session.execute(
+            select(Vaccination).where(Vaccination.patient_id == patient_id).order_by(Vaccination.date_administered.desc())
+        )
+        vaccinations = vac_res.scalars().all()
+
+        return {
+            "patient": {
+                "id": patient.id,
+                "name": patient.name,
+                "species": patient.species,
+                "breed": patient.breed,
+                "birth_date": patient.birth_date.strftime("%Y-%m-%d") if patient.birth_date else None,
+                "weight": patient.weight,
+                "height": patient.height,
+                "sex": patient.sex
+            },
+            "records": [
+                {"id": r.id, "date": r.created_at.strftime("%d/%m/%Y %H:%M"), "description": r.description, "vet_name": r.vet_name} 
+                for r in records
+            ],
+            "vaccinations": [
+                {
+                    "id": v.id, 
+                    "vaccine_name": v.vaccine_name, 
+                    "date": v.date_administered.strftime("%d/%m/%Y"),
+                    "next_dose": v.next_dose_date.strftime("%d/%m/%Y") if v.next_dose_date else "N/A"
+                } 
+                for v in vaccinations
+            ]
+        }
+
+@router.post("/add_clinical_record")
+async def add_clinical_record(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    patient_id = data.get("patient_id")
+    description = data.get("description")
+    
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        # Verify ownership
+        pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
+        if not pat_res.scalar(): raise HTTPException(status_code=403)
+        
+        new_rec = ClinicalRecord(
+            org_id=org.id,
+            patient_id=patient_id,
+            description=description,
+            vet_name=username
+        )
+        session.add(new_rec)
+        await session.commit()
+        return {"status": "success"}
+
+@router.post("/add_vaccination")
+async def add_vaccination(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    patient_id = data.get("patient_id")
+    vaccine_name = data.get("vaccine_name")
+    next_dose_date = data.get("next_dose_date")
+    
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        # Verify ownership
+        pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
+        if not pat_res.scalar(): raise HTTPException(status_code=403)
+        
+        next_dt = None
+        if next_dose_date:
+            try: next_dt = datetime.strptime(next_dose_date, "%Y-%m-%d")
+            except: pass
+
+        new_vac = Vaccination(
+            org_id=org.id,
+            patient_id=patient_id,
+            vaccine_name=vaccine_name,
+            next_dose_date=next_dt
+        )
+        session.add(new_vac)
+        await session.commit()
+        return {"status": "success"}
+
+@router.post("/update_clinical_record/{record_id}")
+async def update_clinical_record(record_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    description = data.get("description")
+    
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        rec_res = await session.execute(select(ClinicalRecord).where(ClinicalRecord.id == record_id, ClinicalRecord.org_id == org.id))
+        record = rec_res.scalar()
+        if not record: raise HTTPException(status_code=404)
+        
+        record.description = description
+        await session.commit()
+        return {"status": "success"}
+
+@router.post("/update_vaccination/{vac_id}")
+async def update_vaccination(vac_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    vaccine_name = data.get("vaccine_name")
+    next_dose_date = data.get("next_dose_date")
+    
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        vac_res = await session.execute(select(Vaccination).where(Vaccination.id == vac_id, Vaccination.org_id == org.id))
+        vaccination = vac_res.scalar()
+        if not vaccination: raise HTTPException(status_code=404)
+        
+        vaccination.vaccine_name = vaccine_name
+        if next_dose_date:
+            try: vaccination.next_dose_date = datetime.strptime(next_dose_date, "%Y-%m-%d")
+            except: pass
+        else:
+            vaccination.next_dose_date = None
+            
+        await session.commit()
+        return {"status": "success"}

@@ -231,48 +231,62 @@
             transform: scale(1.02);
         }
 
-        /* Modal Styles */
-        .modal {
+        /* Tabs styling */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--sidebar-hover);
+        }
+
+        .tab-content {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
         }
 
-        .modal-content {
-            background: var(--card);
-            padding: 2.5rem;
-            border-radius: 24px;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid var(--border);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .tab-content.active {
+            display: block;
         }
 
-        .modal h2 {
-            margin-bottom: 1rem;
-            font-size: 1.25rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 12px;
+        /* Detail List Styling */
+        .detail-item {
             background: var(--bg);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
             border: 1px solid var(--border);
-            color: var(--text-main);
-            outline: none;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -452,8 +466,8 @@
 
                                     <button class="btn"
                                         style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
-                                        onclick="openEditPatientModal({{ row.Patient.id }}, '{{ row.Patient.name }}', '{{ row.Patient.species }}', '{{ row.Patient.breed or '' }}', '{{ row.Patient.birth_date.strftime('%Y-%m-%d') if row.Patient.birth_date else '' }}', '{{ row.Patient.weight or '' }}', '{{ row.Patient.height or '' }}', '{{ row.Patient.sex or '' }}')">
-                                        ✏️ Editar</button>
+                                        onclick="openEditPatientModal('{{ row.Patient.id }}')">
+                                        👁️ Ver Detalle</button>
                                 </div>
                             </td>
                         </tr>
@@ -484,50 +498,151 @@
         </div>
     </div>
 
-    <!-- Edit Patient Modal -->
+    <!-- Detailed Patient Modal (Tabs) -->
     <div id="patientEditModal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <h2>📝 Editar Paciente</h2>
-            <input type="hidden" id="editPatId">
-            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Nombre</label>
-                    <input type="text" id="editPatName">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 id="modalTitle">Detalle del Paciente</h2>
+                <button onclick="closeEditPatientModal()"
+                    style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:1.5rem;">&times;</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('tab-general', this)">📋 Datos</button>
+                <button class="tab-btn" onclick="switchTab('tab-historia', this)">📜 Historia</button>
+                <button class="tab-btn" onclick="switchTab('tab-vacunas', this)">💉 Vacunas</button>
+            </div>
+
+            <!-- Tab: General -->
+            <div id="tab-general" class="tab-content active">
+                <input type="hidden" id="editPatId">
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Nombre</label>
+                        <input type="text" id="editPatName">
+                    </div>
+                    <div class="form-group">
+                        <label>Especie</label>
+                        <input type="text" id="editPatSpecies">
+                    </div>
+                    <div class="form-group">
+                        <label>Raza</label>
+                        <input type="text" id="editPatBreed">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" id="editPatBirth">
+                    </div>
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select id="editPatSex"
+                            style="width: 100%; padding: 0.75rem; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text-main); outline: none;">
+                            <option value="Macho">Macho</option>
+                            <option value="Hembra">Hembra</option>
+                            <option value="No especificado">No especificado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Peso (kg)</label>
+                        <input type="number" step="0.1" id="editPatWeight">
+                    </div>
+                    <div class="form-group">
+                        <label>Altura (cm)</label>
+                        <input type="number" step="0.1" id="editPatHeight">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Especie</label>
-                    <input type="text" id="editPatSpecies">
-                </div>
-                <div class="form-group">
-                    <label>Raza</label>
-                    <input type="text" id="editPatBreed">
-                </div>
-                <div class="form-group">
-                    <label>Fecha de Nacimiento</label>
-                    <input type="date" id="editPatBirth">
-                </div>
-                <div class="form-group">
-                    <label>Sexo</label>
-                    <select id="editPatSex"
-                        style="width: 100%; padding: 0.75rem; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text-main); outline: none;">
-                        <option value="Macho">Macho</option>
-                        <option value="Hembra">Hembra</option>
-                        <option value="No especificado">No especificado</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Peso (kg)</label>
-                    <input type="number" step="0.1" id="editPatWeight">
-                </div>
-                <div class="form-group">
-                    <label>Altura (cm)</label>
-                    <input type="number" step="0.1" id="editPatHeight">
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn" style="width: 100%;" onclick="savePatientEdit()">Guardar Cambios
+                        Principales</button>
                 </div>
             </div>
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button class="btn" style="flex: 1;" onclick="savePatientEdit()">Guardar Cambios</button>
-                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
-                    onclick="closeEditPatientModal()">Cancelar</button>
+
+            <!-- Tab: Historia Clínica -->
+            <div id="tab-historia" class="tab-content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+                    <h3>Evolución Médica</h3>
+                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--success);"
+                        onclick="showNewRecordForm()">+ Nueva</button>
+                </div>
+
+                <div id="new-record-form"
+                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary);">
+                    <textarea id="new-record-desc" placeholder="Describe la evolución, diagnóstico o tratamiento..."
+                        style="width:100%; height:80px; background:var(--bg); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:0.5rem; outline:none; margin-bottom:0.5rem;"></textarea>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewRecord()">Guardar
+                            Registro</button>
+                        <button class="btn"
+                            style="flex:1; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
+                            onclick="hideNewRecordForm()">Cancelar</button>
+                    </div>
+                </div>
+
+                <div id="history-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Se llena con JS -->
+                </div>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    {% if org.plan_type == 'pro' or org.plan_type == 'premium' %}
+                    <button class="btn" style="width: 100%; background: var(--card); border: 1px solid var(--primary);"
+                        id="btnExportHistory">📜 Descargar Historia Clínica (PDF)</button>
+                    {% else %}
+                    <button class="btn"
+                        style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
+                        onclick="alert('Mejora a PRO para descargar PDFs')">🔒 PDF bloqueado (Plan {{
+                        org.plan_type.upper() }})</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab: Vacunas -->
+            <div id="tab-vacunas" class="tab-content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+                    <h3>Plan de Vacunación</h3>
+                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--primary-light);"
+                        onclick="showNewVacForm()">+ Registrar</button>
+                </div>
+
+                <div id="new-vac-form"
+                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary-light);">
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <input type="text" id="new-vac-name" placeholder="Nombre de vacuna (ej: Sextuple)">
+                        <input type="date" id="new-vac-next" title="Próxima dosis (opcional)">
+                    </div>
+                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewVac()">Confirmar
+                            Aplicación</button>
+                        <button class="btn"
+                            style="flex:1; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
+                            onclick="hideNewVacForm()">Cancelar</button>
+                    </div>
+                </div>
+
+                <table id="vaccine-table">
+                    <thead>
+                        <tr>
+                            <th>Vacuna</th>
+                            <th>Fecha</th>
+                            <th>Sig. Dosis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vaccine-list">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    {% if org.plan_type == 'pro' or org.plan_type == 'premium' %}
+                    <button class="btn"
+                        style="width: 100%; background: var(--card); border: 1px solid var(--primary-light);"
+                        id="btnExportVac">💉 Descargar Certificado (PDF)</button>
+                    {% else %}
+                    <button class="btn"
+                        style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
+                        onclick="alert('Mejora a PRO para descargar Certificados')">🔒 PDF bloqueado (Plan {{
+                        org.plan_type.upper() }})</button>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -596,17 +711,149 @@
             }
         }
 
-        // --- Patient Edit Logic ---
-        function openEditPatientModal(id, name, species, breed, birth, weight, height, sex) {
-            document.getElementById('editPatId').value = id;
-            document.getElementById('editPatName').value = name;
-            document.getElementById('editPatSpecies').value = species;
-            document.getElementById('editPatBreed').value = breed;
-            document.getElementById('editPatBirth').value = birth;
-            document.getElementById('editPatWeight').value = weight;
-            document.getElementById('editPatHeight').value = height;
-            document.getElementById('editPatSex').value = sex || 'No especificado';
+        // --- Patient Detail & Tabs Logic ---
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        async function openEditPatientModal(id) {
+            // Load base data from API
+            const res = await fetch(`/admin/patient_data/${id}`);
+            if (!res.ok) return alert("Error al cargar datos del paciente");
+
+            const data = await res.json();
+            const p = data.patient;
+
+            document.getElementById('editPatId').value = p.id;
+            document.getElementById('modalTitle').innerText = `Detalle: ${p.name}`;
+            document.getElementById('editPatName').value = p.name;
+            document.getElementById('editPatSpecies').value = p.species;
+            document.getElementById('editPatBreed').value = p.breed || '';
+            document.getElementById('editPatBirth').value = p.birth_date || '';
+            document.getElementById('editPatWeight').value = p.weight || '';
+            document.getElementById('editPatHeight').value = p.height || '';
+            document.getElementById('editPatSex').value = p.sex || 'No especificado';
+
+            // Populate Clinical History
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = data.records.length ? '' : '<p style="color:var(--text-dim); padding:1rem;">No hay registros aún.</p>';
+            data.records.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                item.innerHTML = `
+                    <div class="detail-header">
+                        <span>📅 ${r.date}</span>
+                        <span>👨‍⚕️ ${r.vet_name}</span>
+                    </div>
+                    <div style="font-size:0.95rem; margin-bottom:0.5rem;">${r.description}</div>
+                    <div style="text-align:right;">
+                        <button class="btn" style="font-size:0.7rem; padding:0.2rem 0.5rem; background:transparent; border:1px solid var(--border); color:var(--text-dim) !important;" 
+                            onclick="editClinicalRecord(${r.id}, '${r.description.replace(/'/g, "\\'")}')">✏️ Editar</button>
+                    </div>
+                `;
+                historyList.appendChild(item);
+            });
+
+            // Populate Vaccinations
+            const vaccineList = document.getElementById('vaccine-list');
+            vaccineList.innerHTML = data.vaccinations.length ? '' : '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Sin vacunas registradas</td></tr>';
+            data.vaccinations.forEach(v => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${v.vaccine_name}</strong></td>
+                    <td>${v.date}</td>
+                    <td><span class="badge" style="background:var(--sidebar-hover); color:var(--primary);">${v.next_dose}</span></td>
+                    <td style="text-align:right;">
+                        <button onclick="editVaccination(${v.id}, '${v.vaccine_name}', '${v.next_dose}')" style="background:none; border:none; cursor:pointer;">✏️</button>
+                    </td>
+                `;
+                vaccineList.appendChild(row);
+            });
+
+            // Set PDF links
+            const btnHistory = document.getElementById('btnExportHistory');
+            if (btnHistory) btnHistory.onclick = () => window.open(`/admin/export_history/${p.id}`, '_blank');
+
+            const btnVac = document.getElementById('btnExportVac');
+            if (btnVac) btnVac.onclick = () => window.open(`/admin/export_vaccines/${p.id}`, '_blank');
+
+            // Reset tabs
+            switchTab('tab-general', document.querySelector('.tab-btn'));
             document.getElementById('patientEditModal').style.display = 'flex';
+        }
+
+        function showNewRecordForm() { document.getElementById('new-record-form').style.display = 'block'; }
+        function hideNewRecordForm() { document.getElementById('new-record-form').style.display = 'none'; }
+
+        async function submitNewRecord() {
+            const description = document.getElementById('new-record-desc').value;
+            const patient_id = document.getElementById('editPatId').value;
+            if (!description) return alert("Escribe un detalle clínico");
+
+            const res = await fetch('/admin/add_clinical_record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, description })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-record-desc').value = '';
+                hideNewRecordForm();
+                openEditPatientModal(patient_id); // Refresh
+            }
+        }
+
+        function showNewVacForm() { document.getElementById('new-vac-form').style.display = 'block'; }
+        function hideNewVacForm() { document.getElementById('new-vac-form').style.display = 'none'; }
+
+        async function submitNewVac() {
+            const vaccine_name = document.getElementById('new-vac-name').value;
+            const next_dose_date = document.getElementById('new-vac-next').value;
+            const patient_id = document.getElementById('editPatId').value;
+            if (!vaccine_name) return alert("Indica el nombre de la vacuna");
+
+            const res = await fetch('/admin/add_vaccination', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, vaccine_name, next_dose_date })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-vac-name').value = '';
+                document.getElementById('new-vac-next').value = '';
+                hideNewVacForm();
+                openEditPatientModal(patient_id); // Refresh
+            }
+        }
+
+        async function editClinicalRecord(id, oldDesc) {
+            const newDesc = prompt("Editar evolución clínica:", oldDesc);
+            if (newDesc === null || newDesc === oldDesc) return;
+
+            const res = await fetch(`/admin/update_clinical_record/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: newDesc })
+            });
+            if (res.ok) openEditPatientModal(document.getElementById('editPatId').value);
+        }
+
+        async function editVaccination(id, oldName, oldNext) {
+            const newName = prompt("Nombre de la vacuna:", oldName);
+            if (newName === null) return;
+            const nextStr = oldNext !== 'N/A' ? oldNext.split('/').reverse().join('-') : '';
+            const newNext = prompt("Próxima dosis (AAAA-MM-DD):", nextStr);
+            if (newNext === null) return;
+
+            const res = await fetch(`/admin/update_vaccination/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vaccine_name: newName, next_dose_date: newNext })
+            });
+            if (res.ok) openEditPatientModal(document.getElementById('editPatId').value);
         }
 
         function closeEditPatientModal() {
