@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
 from src.core.database import AsyncSessionLocal
-from src.models.models import Organization
+from src.models.models import Organization, Service
 from src.services.openai_service import get_chat_completion, transcribe_audio_file, get_vision_completion
 from src.services.whatsapp import send_whatsapp_message
 from src.services.booking import master_booking_flow, get_vaccination_history
@@ -129,6 +129,17 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
         
         # Disponibilidad real
         availability_text = await get_formatted_availability(org.id)
+
+        # Servicios y Precios
+        services_text = "LISTADO DE PRECIOS Y SERVICIOS:\n"
+        async with AsyncSessionLocal() as session:
+            serv_res = await session.execute(select(Service).where(Service.org_id == org.id))
+            services = serv_res.scalars().all()
+            if services:
+                for s in services:
+                    services_text += f"- {s.name}: ${s.price:.2f} ({s.category})\n"
+            else:
+                services_text += "(No hay precios cargados aún. Informar que se consulte con un humano si preguntan por costos específicos)\n"
         
         # Preparar Prompt con Identidad y Disponibilidad
         system_base = get_system_prompt().replace("[CLINICA_NOMBRE]", org.name)
@@ -156,6 +167,7 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
             f"IDENTIDAD ACTUAL: Estás atendiendo para la clínica '{org.name}'.\n"
             f"FECHA ACTUAL: Hoy es {fecha_es}.\n"
             f"HORARIOS DISPONIBLES:\n{availability_text}\n"
+            f"{services_text}\n"
             f"{vaccine_info}"
         )
         

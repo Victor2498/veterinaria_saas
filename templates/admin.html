@@ -425,6 +425,7 @@
         <a href="#" class="nav-item active" onclick="showSection('dashboard', this)">📊 Dashboard</a>
         <a href="#" class="nav-item" onclick="showSection('citas', this)">🗓️ Citas</a>
         <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
+        <a href="#" class="nav-item" onclick="showSection('servicios', this)">🏷️ Servicios</a>
 
         <div style="margin-top: auto;">
             <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
@@ -489,7 +490,9 @@
                         {% for row in recent_appointments %}
                         <tr>
                             <td><strong style="cursor: pointer; color: var(--primary);"
-                                    onclick="navigateToPatient('{{ row.Patient.id if row.Patient else '' }}', '{{ row.Appointment.pet_name }}')">
+                                    data-pid="{{ row.Patient.id if row.Patient else '' }}"
+                                    data-pname="{{ row.Appointment.pet_name }}"
+                                    onclick="navigateToPatientFromData(this)">
                                     {{ row.Appointment.pet_name }}</strong></td>
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
@@ -537,7 +540,9 @@
                         {% for row in all_appointments %}
                         <tr>
                             <td><strong style="cursor: pointer; color: var(--primary);"
-                                    onclick="navigateToPatient('{{ row.Patient.id if row.Patient else '' }}', '{{ row.Appointment.pet_name }}')">
+                                    data-pid="{{ row.Patient.id if row.Patient else '' }}"
+                                    data-pname="{{ row.Appointment.pet_name }}"
+                                    onclick="navigateToPatientFromData(this)">
                                     {{ row.Appointment.pet_name }}</strong></td>
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.reason or 'Consulta General' }}</td>
@@ -616,6 +621,51 @@
                                         style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid #f43f5e; color: #f43f5e !important;"
                                         onclick="deletePatient('{{ row.Patient.id }}', '{{ row.Patient.name }}')">
                                         🗑️ Eliminar</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- SECTION: SERVICIOS -->
+        <div id="section-servicios" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Gestión de Servicios y Precios</h2>
+                    <button class="btn" onclick="openAddServiceModal()">+ Nuevo Servicio</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-table-body">
+                        {% for s in services %}
+                        <tr>
+                            <td><strong>{{ s.name }}</strong></td>
+                            <td><span class="badge" style="background: var(--bg); border: 1px solid var(--border);">{{
+                                    s.category }}</span></td>
+                            <td><strong style="color: var(--success);">${{ "%.2f"|format(s.price) }}</strong></td>
+                            <td style="font-size: 0.85rem; color: var(--text-dim);">{{ s.description or '-' }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
+                                        data-id="{{ s.id }}" data-name="{{ s.name }}" data-price="{{ s.price }}"
+                                        data-cat="{{ s.category }}" data-desc="{{ s.description or '' }}"
+                                        onclick="openEditServiceModalFromData(this)">
+                                        ✏️ Editar</button>
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid #f43f5e; color: #f43f5e !important;"
+                                        onclick="deleteService('{{ s.id }}', '{{ s.name }}')">
+                                        🗑️ Borrar</button>
                                 </div>
                             </td>
                         </tr>
@@ -1034,6 +1084,10 @@
             }
         }
 
+        function navigateToPatientFromData(el) {
+            navigateToPatient(el.getAttribute('data-pid'), el.getAttribute('data-pname'));
+        }
+
         function navigateToPatient(id, name) {
             showSection('pacientes', document.querySelector('a[onclick*="pacientes"]'));
             if (id) {
@@ -1082,6 +1136,73 @@
             }
         }
 
+        function closeServiceModal() {
+            document.getElementById('serviceModal').style.display = 'none';
+        }
+
+        function openAddServiceModal() {
+            document.getElementById('serviceModalTitle').innerText = '🏷️ Nuevo Servicio';
+            document.getElementById('serviceId').value = '';
+            document.getElementById('serviceName').value = '';
+            document.getElementById('servicePrice').value = '';
+            document.getElementById('serviceCategory').value = 'Consultas';
+            document.getElementById('serviceDescription').value = '';
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function openEditServiceModal(id, name, price, category, desc) {
+            document.getElementById('serviceModalTitle').innerText = '✏️ Editar Servicio';
+            document.getElementById('serviceId').value = id;
+            document.getElementById('serviceName').value = name;
+            document.getElementById('servicePrice').value = price;
+            document.getElementById('serviceCategory').value = category;
+            document.getElementById('serviceDescription').value = desc;
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function openEditServiceModalFromData(btn) {
+            openEditServiceModal(
+                btn.getAttribute('data-id'),
+                btn.getAttribute('data-name'),
+                btn.getAttribute('data-price'),
+                btn.getAttribute('data-cat'),
+                btn.getAttribute('data-desc')
+            );
+        }
+
+        async function submitService() {
+            const id = document.getElementById('serviceId').value;
+            const data = {
+                name: document.getElementById('serviceName').value,
+                price: document.getElementById('servicePrice').value,
+                category: document.getElementById('serviceCategory').value,
+                description: document.getElementById('serviceDescription').value
+            };
+
+            const url = id ? `/admin/update_service/${id}` : '/admin/add_service';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Error al guardar el servicio');
+            }
+        }
+
+        async function deleteService(id, name) {
+            if (!confirm(`¿Estás seguro de borrar el servicio "${name}"?`)) return;
+            const res = await fetch(`/admin/delete_service/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Error al eliminar');
+            }
+        }
+
         function toggleTheme() {
             const body = document.body;
             const isLight = body.classList.toggle('light-mode');
@@ -1111,6 +1232,43 @@
             updateAges();
         })();
     </script>
+    <!-- Service Modal -->
+    <div id="serviceModal" class="modal">
+        <div class="modal-content">
+            <h2 id="serviceModalTitle">🏷️ Nuevo Servicio</h2>
+            <input type="hidden" id="serviceId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre del Servicio</label>
+                    <input type="text" id="serviceName" placeholder="Ej: Vacuna Sextuple">
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="serviceCategory" class="status-select" style="width: 100%; padding: 0.8rem;">
+                        <option value="Consultas">Consultas</option>
+                        <option value="Vacunas">Vacunas</option>
+                        <option value="Peluquería">Peluquería</option>
+                        <option value="Antiparasitarios">Antiparasitarios</option>
+                        <option value="Cirugías">Cirugías</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Precio ($)</label>
+                    <input type="number" id="servicePrice" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Descripción (Opcional)</label>
+                    <input type="text" id="serviceDescription" placeholder="Breve detalle del servicio">
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1;" onclick="submitService()">Guardar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="closeServiceModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

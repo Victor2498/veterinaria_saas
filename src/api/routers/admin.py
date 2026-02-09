@@ -53,6 +53,13 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
             .where(Patient.org_id == org.id)
             .order_by(Patient.name)
         )
+
+        # 4. Todos los Servicios
+        services_res = await session.execute(
+            select(Service)
+            .where(Service.org_id == org.id)
+            .order_by(Service.category, Service.name)
+        )
         
         return templates.TemplateResponse("admin.html", {
             "request": request,
@@ -61,7 +68,8 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
             "recent_appointments": recent_res.all(),
             "all_appointments": all_app_res.all(),
             "patients": pat_all_res.all(),
-            "patients_count": len(pat_all_res.all()) # Simple count based on query length (not fully optimized but works for now)
+            "patients_count": len(pat_all_res.all()),
+            "services": services_res.scalars().all()
         })
 
 @router.get("/subscription", response_class=HTMLResponse)
@@ -443,3 +451,54 @@ async def delete_patient(patient_id: int, username: str = Depends(admin_required
         await session.commit()
         
         return {"status": "success", "message": "Paciente y registros relacionados eliminados correctamente"}
+
+@router.post("/add_service")
+async def add_service(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        new_service = Service(
+            org_id=org.id,
+            name=data.get("name"),
+            price=float(data.get("price")),
+            category=data.get("category", "General"),
+            description=data.get("description")
+        )
+        session.add(new_service)
+        await session.commit()
+        return {"status": "success", "message": "Servicio creado"}
+
+@router.post("/update_service/{service_id}")
+async def update_service(service_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        res = await session.execute(select(Service).where(Service.id == service_id, Service.org_id == org.id))
+        service = res.scalar()
+        if not service: raise HTTPException(status_code=404)
+        
+        service.name = data.get("name")
+        service.price = float(data.get("price"))
+        service.category = data.get("category")
+        service.description = data.get("description")
+        
+        await session.commit()
+        return {"status": "success"}
+
+@router.delete("/delete_service/{service_id}")
+async def delete_service(service_id: int, username: str = Depends(admin_required)):
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        res = await session.execute(select(Service).where(Service.id == service_id, Service.org_id == org.id))
+        service = res.scalar()
+        if not service: raise HTTPException(status_code=404)
+        
+        await session.delete(service)
+        await session.commit()
+        return {"status": "success"}
