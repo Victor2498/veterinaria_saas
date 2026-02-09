@@ -87,4 +87,14 @@ class RedisManager:
         await self._safe_call(self.redis.delete, f"user:{user_id}:context")
         await self._safe_call(self.redis.delete, f"user:{user_id}:history")
 
+    async def get_services_text(self, org_id: str):
+        """Get cached formatted services list"""
+        key = f"org:{org_id}:services_text"
+        return await self._safe_call(self.redis.get, key)
+
+    async def set_services_text(self, org_id: str, text: str):
+        """Cache formatted services list for 1 hour"""
+        key = f"org:{org_id}:services_text"
+        await self._safe_call(self.redis.set, key, text, ex=3600)
+
 redis_client = RedisManager()
