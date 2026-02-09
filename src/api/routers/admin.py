@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from src.core.database import AsyncSessionLocal
 from src.core.security import admin_required
 from src.models.models import User, Organization, Appointment, Patient, Owner, Service
-from sqlalchemy import select
+from sqlalchemy import select, cast, Integer as SQLInteger
 from datetime import datetime
 import io
 import csv
@@ -323,8 +323,11 @@ async def add_clinical_record(request: Request, username: str = Depends(admin_re
         row = await get_org(username, session)
         user, org = row
         
-        # Verify ownership
-        pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
+        # Verify ownership (Defensive casting and logging)
+        print(f"DEBUG: add_clinical_record - patient_id value: {patient_id}, type: {type(patient_id)}")
+        pat_res = await session.execute(
+            select(Patient).where(cast(Patient.id, SQLInteger) == int(patient_id), Patient.org_id == org.id)
+        )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
         
         new_rec = ClinicalRecord(
@@ -348,8 +351,11 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
         row = await get_org(username, session)
         user, org = row
         
-        # Verify ownership
-        pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
+        # Verify ownership (Defensive casting and logging)
+        print(f"DEBUG: add_vaccination - patient_id value: {patient_id}, type: {type(patient_id)}")
+        pat_res = await session.execute(
+            select(Patient).where(cast(Patient.id, SQLInteger) == int(patient_id), Patient.org_id == org.id)
+        )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
         
         next_dt = None
