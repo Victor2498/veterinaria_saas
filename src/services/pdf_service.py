@@ -76,9 +76,9 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     # --- SECCIÓN 1: PLAN SANITARIO (VACUNAS) ---
     elements.append(Paragraph("<b>PLAN SANITARIO</b>", styles['Heading3']))
     
-    # Clasificación de registros
-    vac_keywords = ["quintuple", "sextuple", "rabia", "tos", "giardia", "leucemia", "parvovirus", "moquillo"]
-    desp_keywords = ["desparasita", "antiparasit", "pipeta", "comprimido", "simparica", "nexgard", "bravecto", "total full"]
+    # Clasificación de registros (Keywords expandidas)
+    vac_keywords = ["vacuna", "quintuple", "sextuple", "rabia", "tos", "giardia", "leucemia", "parvovirus", "moquillo", "refuerzo", "dosis", "antigena"]
+    desp_keywords = ["desparasita", "antiparasit", "pipeta", "comprimido", "simparica", "nexgard", "bravecto", "total full", "totalfull", "drontal", "apredislon", "masticable"]
     
     vac_data = [["FECHA", "VACUNA", "FIRMA Y SELLO", "PRÓX. VACUNA"]]
     desp_data = [["FECHA", "PESO", "TRATAMIENTO", "FIRMA Y SELLO"]]
@@ -93,7 +93,10 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         # Lógica de clasificación
         is_desp = any(kw in name_lower for kw in desp_keywords)
+        is_vac = any(kw in name_lower for kw in vac_keywords)
         
+        # Si contiene keywords de desparasitación o no es explícitamente una vacuna, 
+        # pero para seguridad priorizamos la clasificación detectada
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
             desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), ""])

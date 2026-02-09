@@ -451,7 +451,7 @@
         </div>
 
         <!-- SECTION: DASHBOARD -->
-        <div id="section-dashboard" class="content-section">
+        <div id="section-dashboard" class="content-section" style="display: none;">
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Citas Totales</div>
@@ -1240,12 +1240,23 @@
 
             // Hash detection for section persistence
             const currentHash = window.location.hash.substring(1);
+            let initialized = false;
+
             if (currentHash) {
-                const navItem = document.querySelector(`.nav-item[onclick*="'${currentHash}'"]`) ||
-                    document.querySelector(`.nav-item[onclick*='"${currentHash}"']`);
+                // Selector robusto que ignora diferencias en comillas
+                const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el =>
+                    el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${currentHash}'`)
+                );
+
                 if (navItem) {
                     showSection(currentHash, navItem);
+                    initialized = true;
                 }
+            }
+
+            // Si no hay hash o falló la detección, mostrar dashboard por defecto
+            if (!initialized) {
+                showSection('dashboard', document.querySelector('.nav-item[onclick*="dashboard"]'));
             }
         })();
     </script>
