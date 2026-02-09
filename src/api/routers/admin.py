@@ -7,6 +7,7 @@ from src.models.models import User, Organization, Appointment, Patient, Owner, S
 from sqlalchemy import select
 from datetime import datetime
 import io
+import csv
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_required)])
 templates = Jinja2Templates(directory="templates")
@@ -502,3 +503,43 @@ async def delete_service(service_id: int, username: str = Depends(admin_required
         await session.delete(service)
         await session.commit()
         return {"status": "success"}
+@router.get("/export_patients_csv")
+async def export_patients_csv(username: str = Depends(admin_required)):
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        # Fetch patients with their owners
+        res = await session.execute(
+            select(Patient, Owner)
+            .join(Owner, Patient.owner_id == Owner.id)
+            .where(Patient.org_id == org.id)
+            .order_by(Patient.name)
+        )
+        data = res.all()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Header
+        writer.writerow(["Nombre Mascota", "Especie", "Raza", "Sexo", "Fecha Nacimiento", "Peso (kg)", "Altura (cm)", "Dueño", "Teléfono Dueño"])
+        
+        for p, o in data:
+            writer.writerow([
+                p.name,
+                p.species,
+                p.breed or "-",
+                p.sex or "-",
+                p.birth_date or "-",
+                p.weight or "-",
+                p.height or "-",
+                o.name or "-",
+                o.phone_number or "-"
+            ])
+            
+        output.seek(0)
+        
+        headers = {
+            'Content-Disposition': f'attachment; filename="backup_pacientes_{datetime.now().strftime("%Y%m%d")}.csv"'
+        }
+        return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8')), media_type="text/csv", headers=headers)

@@ -572,9 +572,13 @@
             <div class="section-card">
                 <div class="section-header">
                     <h2>Gestión de Pacientes</h2>
-                    <div style="display: flex; gap: 1rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center;">
                         <input type="text" placeholder="Buscar paciente o dueño..."
                             style="padding: 0.5rem 1rem; border-radius: 10px; width: 300px;">
+                        <a href="/admin/export_patients_csv" class="btn"
+                            style="text-decoration: none; background: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                            📦 Exportar Backup (CSV)
+                        </a>
                     </div>
                 </div>
                 <table>
@@ -857,6 +861,9 @@
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                 element.classList.add('active');
             }
+
+            // Persistence
+            window.location.hash = sectionId;
         }
 
         // Helper to calculate age
@@ -1230,6 +1237,16 @@
                 updateThemeUI(true);
             }
             updateAges();
+
+            // Hash detection for section persistence
+            const currentHash = window.location.hash.substring(1);
+            if (currentHash) {
+                const navItem = document.querySelector(`.nav-item[onclick*="'${currentHash}'"]`) ||
+                    document.querySelector(`.nav-item[onclick*='"${currentHash}"']`);
+                if (navItem) {
+                    showSection(currentHash, navItem);
+                }
+            }
         })();
     </script>
     <!-- Service Modal -->
