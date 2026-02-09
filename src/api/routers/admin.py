@@ -134,7 +134,7 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         vac_res = await session.execute(select(Vaccination).where(Vaccination.patient_id == patient_id))
         vaccinations = vac_res.scalars().all()
         
-        pdf_buffer = generate_vaccination_certificate(org.name, patient.name, vaccinations)
+        pdf_buffer = generate_vaccination_certificate(org.name, patient.name, vaccinations, patient.weight)
         return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=vacunas_{patient.name}.pdf"})
 
 from src.services.billing import create_plan_payment_link
