@@ -39,20 +39,32 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
             .limit(5)
         )
         
-        # 2. Todas las Citas
+        # 2. Todas las Citas (Optimized)
+        # Count
+        count_app_res = await session.execute(select(func.count()).select_from(Appointment).where(Appointment.org_id == org.id))
+        total_appointments = count_app_res.scalar() or 0
+        
+        # List (Limit 50)
         all_app_res = await session.execute(
             select(Appointment, Owner)
             .join(Owner, Appointment.owner_id == Owner.id)
             .where(Appointment.org_id == org.id)
             .order_by(Appointment.date.desc())
+            .limit(50)
         )
         
-        # 3. Todos los Pacientes
+        # 3. Todos los Pacientes (Optimized)
+        # Count
+        count_pat_res = await session.execute(select(func.count()).select_from(Patient).where(Patient.org_id == org.id))
+        total_patients = count_pat_res.scalar() or 0
+
+        # List (Limit 50)
         pat_all_res = await session.execute(
             select(Patient, Owner)
             .join(Owner, Patient.owner_id == Owner.id)
             .where(Patient.org_id == org.id)
             .order_by(Patient.name)
+            .limit(50)
         )
 
         # 4. Todos los Servicios
@@ -65,14 +77,13 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "org": org,
-            "request": request,
-            "org": org,
             "username": username,
             "user": user,
             "recent_appointments": recent_res.all(),
-            "all_appointments": all_app_res.all(),
-            "patients": pat_all_res.all(),
-            "patients_count": len(pat_all_res.all()),
+            "all_appointments": all_app_res.all(), # Contains only 50
+            "total_appointments": total_appointments, # Real count
+            "patients": pat_all_res.all(), # Contains only 50
+            "patients_count": total_patients, # Real count
             "services": services_res.scalars().all()
         })
 

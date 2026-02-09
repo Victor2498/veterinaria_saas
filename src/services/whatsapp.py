@@ -36,6 +36,7 @@ async def send_whatsapp_message(phone: str, text: str, api_url: str = None, api_
     }
 
     try:
+        session = await get_session()
         async with session.post(url, json=payload, headers=headers) as resp:
             if resp.status in [200, 201]:
                 return await resp.json()
