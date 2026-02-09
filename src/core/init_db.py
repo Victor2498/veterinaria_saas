@@ -1,7 +1,7 @@
 from sqlalchemy import select, text
 from src.core.security import get_password_hash
 from src.core.database import engine, AsyncSessionLocal, Base
-from src.models.models import Organization, User
+from src.models.models import Organization, User, MedicalAttention, Ticket, TicketItem
 
 async def init_db():
     async with engine.begin() as conn:

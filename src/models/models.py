@@ -110,3 +110,37 @@ class Appointment(Base):
     date = Column(DateTime(timezone=True), index=True)
     status = Column(String, default="confirmed", index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class MedicalAttention(Base):
+    __tablename__ = "medical_attentions"
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
+    vet_id = Column(Integer, ForeignKey("users.id"), index=True)
+    status = Column(String, default="in_progress") # suspended, in_progress, finished
+    start_date = Column(DateTime(timezone=True), server_default=func.now())
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Ticket(Base):
+    __tablename__ = "tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    attention_id = Column(Integer, ForeignKey("medical_attentions.id"), unique=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
+    ticket_number = Column(String, index=True)
+    date = Column(DateTime(timezone=True), server_default=func.now())
+    total_amount = Column(Float, default=0.0)
+    currency = Column(String, default="ARS")
+    payment_status = Column(String, default="pending") # pending, paid
+    payment_method = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class TicketItem(Base):
+    __tablename__ = "ticket_items"
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), index=True)
+    description = Column(String)
+    unit_price = Column(Float)
+    quantity = Column(Integer, default=1)
+    subtotal = Column(Float)

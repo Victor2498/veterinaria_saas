@@ -426,6 +426,8 @@
         <a href="#" class="nav-item" onclick="showSection('citas', this)">🗓️ Citas</a>
         <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
         <a href="#" class="nav-item" onclick="showSection('servicios', this)">🏷️ Servicios</a>
+        <a href="#" class="nav-item" onclick="showSection('atenciones', this)">🩺 Atenciones</a>
+        <a href="#" class="nav-item" onclick="showSection('caja', this)">💰 Caja</a>
 
         <div style="margin-top: auto;">
             <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
@@ -1396,6 +1398,180 @@
             }
         }
     </script>
+    <!-- SECTION: ATENCIONES -->
+    <div id="section-atenciones" class="content-section" style="display: none;">
+        <div class="section-header">
+            <h2>Gestión de Atenciones</h2>
+            <button class="btn" onclick="openNewAttentionModal()">+ Nueva Atención</button>
+        </div>
+
+        <div class="kanban-board" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;">
+            <!-- Column: Suspendido -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <h3 style="border-bottom: 2px solid var(--secondary); padding-bottom: 0.5rem; margin-bottom: 1rem;">⏳ En
+                    Espera</h3>
+                <div id="kanban-suspended" class="kanban-list"
+                    style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+            <!-- Column: En Progreso -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--primary);">
+                <h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1rem;">👨‍⚕️
+                    En Consulta</h3>
+                <div id="kanban-in_progress" class="kanban-list"
+                    style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+            <!-- Column: Terminado -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--success);">
+                <h3 style="border-bottom: 2px solid var(--success); padding-bottom: 0.5rem; margin-bottom: 1rem;">✅
+                    Finalizados (Hoy)</h3>
+                <div id="kanban-finished" class="kanban-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION: CAJA -->
+    <div id="section-caja" class="content-section" style="display: none;">
+        <div class="section-header">
+            <h2>Caja y Facturación</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn" onclick="loadFinanceMetrics('today')"
+                    style="background: var(--card); border: 1px solid var(--border);">Hoy</button>
+                <button class="btn" onclick="loadFinanceMetrics('month')"
+                    style="background: var(--card); border: 1px solid var(--border);">Mes</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Ingresos del Periodo</div>
+                <div class="stat-value" id="finance-total">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tickets Emitidos</div>
+                <div class="stat-value" id="finance-count">0</div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Últimos Tickets</h3>
+            <table id="tickets-table">
+                <thead>
+                    <tr>
+                        <th># Ticket</th>
+                        <th>Fecha</th>
+                        <th>Paciente</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- New Attention Modal -->
+    <div id="newAttentionModal" class="modal">
+        <div class="modal-content">
+            <h2>🏥 Nueva Atención</h2>
+            <div class="form-group">
+                <label>Paciente</label>
+                <select id="attPatientSelect" class="status-select" style="width: 100%; padding: 0.8rem;">
+                    <option value="">Seleccione un paciente...</option>
+                    {% for p in patients %}
+                    <option value="{{ p.Patient.id }}">{{ p.Patient.name }} ({{ p.Owner.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notas Iniciales (Motivo)</label>
+                <textarea id="attNotes" rows="3" placeholder="Motivo de la consulta..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1;" onclick="createAttention()">Iniciar Consulta</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="document.getElementById('newAttentionModal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finish Attention Modal (Ticket Generation) -->
+    <div id="finishAttentionModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2>🧾 Finalizar Consulta y Generar Ticket</h2>
+            <input type="hidden" id="finishAttId">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Left: Services Adder -->
+                <div>
+                    <h3>Agregar Servicios</h3>
+                    <div class="form-group">
+                        <label>Servicio / Producto</label>
+                        <select id="ticketServiceSelect" class="status-select" style="width: 100%;"
+                            onchange="updateTicketPrice()">
+                            <option value="">Seleccionar...</option>
+                            {% for s in services %}
+                            <option value="{{ s.id }}" data-price="{{ s.price }}" data-name="{{ s.name }}">{{ s.name }}
+                                - ${{ s.price }}</option>
+                            {% endfor %}
+                            <option value="custom" data-price="0">Otro (Manual)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="customServiceDiv" style="display:none;">
+                        <input type="text" id="customServiceName" placeholder="Descripción del servicio">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Precio</label>
+                            <input type="number" id="ticketItemPrice" placeholder="0.00">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Cantidad</label>
+                            <input type="number" id="ticketItemQty" value="1">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="addTicketItem()">Agregar al Ticket</button>
+                </div>
+
+                <!-- Right: Ticket Preview -->
+                <div style="background: var(--bg); padding: 1rem; border-radius: 8px;">
+                    <h3>Resumen del Ticket</h3>
+                    <table id="ticketPreviewTable" style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Cant</th>
+                                <th>Subtotal</th>
+                                <th>X</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div
+                        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.5rem; text-align: right; font-weight: bold; font-size: 1.2rem;">
+                        Total: $<span id="ticketTotal">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Notas Finales</label>
+                <textarea id="finishNotes" rows="2" placeholder="Indicaciones finales..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1; background: var(--success);"
+                    onclick="submitFinishAttention()">Finalizar y Cobrar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="document.getElementById('finishAttentionModal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Modal -->
     <div id="serviceModal" class="modal">
         <div class="modal-content">
@@ -1433,6 +1609,229 @@
             </div>
         </div>
     </div>
+    <script>
+        // --- ATENCIONES LOGIC ---
+        async function loadAttentions() {
+            try {
+                const res = await fetch('/attentions/active');
+                if (res.ok) {
+                    const data = await res.json();
+                    renderKanban(data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderKanban(data) {
+            const cols = {
+                'suspended': document.getElementById('kanban-suspended'),
+                'in_progress': document.getElementById('kanban-in_progress'),
+                'finished': document.getElementById('kanban-finished')
+            };
+            // Clear
+            Object.values(cols).forEach(c => c.innerHTML = '');
+
+            data.forEach(att => {
+                const card = document.createElement('div');
+                card.className = 'kanban-card';
+                card.style = 'background: var(--bg); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.8rem;';
+                card.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 0.5rem;">${att.patient_name}</div>
+            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Inicio: ${att.start_date}</div>
+            <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${att.notes || ''}</div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                ${getKanbanButtons(att)}
+            </div>
+        `;
+                if (cols[att.status]) cols[att.status].appendChild(card);
+            });
+        }
+
+        function getKanbanButtons(att) {
+            if (att.status === 'suspended') {
+                return `<button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="updateAttentionStatus(${att.id}, 'in_progress')">▶ Retomar</button>`;
+            } else if (att.status === 'in_progress') {
+                return `
+            <button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: var(--secondary);" onclick="updateAttentionStatus(${att.id}, 'suspended')">⏸ Pausar</button>
+            <button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: var(--success);" onclick="openFinishModal(${att.id})">✅ Finalizar</button>
+        `;
+            }
+            return '';
+        }
+
+        async function updateAttentionStatus(id, status) {
+            await fetch(`/attentions/update_status/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadAttentions();
+        }
+
+        function openNewAttentionModal() {
+            document.getElementById('newAttentionModal').style.display = 'flex';
+        }
+
+        async function createAttention() {
+            const patient_id = document.getElementById('attPatientSelect').value;
+            const notes = document.getElementById('attNotes').value;
+            if (!patient_id) return alert("Seleccione un paciente");
+
+            const res = await fetch('/attentions/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, notes })
+            });
+
+            if (res.ok) {
+                document.getElementById('newAttentionModal').style.display = 'none';
+                loadAttentions();
+            } else {
+                const err = await res.json();
+                alert(err.detail);
+            }
+        }
+
+        // --- FINANCE LOGIC ---
+        let ticketItems = [];
+
+        function openFinishModal(attId) {
+            document.getElementById('finishAttId').value = attId;
+            ticketItems = [];
+            renderTicketPreview();
+            document.getElementById('finishAttentionModal').style.display = 'flex';
+        }
+
+        function updateTicketPrice() {
+            const sel = document.getElementById('ticketServiceSelect');
+            const opt = sel.options[sel.selectedIndex];
+            if (sel.value === 'custom') {
+                document.getElementById('customServiceDiv').style.display = 'block';
+                document.getElementById('ticketItemPrice').value = '';
+            } else {
+                document.getElementById('customServiceDiv').style.display = 'none';
+                document.getElementById('ticketItemPrice').value = opt.getAttribute('data-price');
+            }
+        }
+
+        function addTicketItem() {
+            const sel = document.getElementById('ticketServiceSelect');
+            let desc, price;
+
+            if (sel.value === 'custom') {
+                desc = document.getElementById('customServiceName').value;
+                price = parseFloat(document.getElementById('ticketItemPrice').value);
+            } else {
+                desc = sel.options[sel.selectedIndex].getAttribute('data-name');
+                price = parseFloat(document.getElementById('ticketItemPrice').value);
+            }
+
+            const qty = parseInt(document.getElementById('ticketItemQty').value);
+
+            if (!desc || isNaN(price) || price < 0) return alert("Datos inválidos");
+
+            ticketItems.push({ description: desc, price: price, quantity: qty });
+            renderTicketPreview();
+        }
+
+        function renderTicketPreview() {
+            const tbody = document.querySelector('#ticketPreviewTable tbody');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            ticketItems.forEach((item, idx) => {
+                const sub = item.price * item.quantity;
+                total += sub;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td>${item.description}</td>
+            <td>${item.quantity}</td>
+            <td>$${sub.toFixed(2)}</td>
+            <td style="cursor:pointer; color:red;" onclick="removeTicketItem(${idx})">🗑️</td>
+        `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('ticketTotal').innerText = total.toFixed(2);
+        }
+
+        function removeTicketItem(idx) {
+            ticketItems.splice(idx, 1);
+            renderTicketPreview();
+        }
+
+        async function submitFinishAttention() {
+            const attId = document.getElementById('finishAttId').value;
+            const notes = document.getElementById('finishNotes').value;
+
+            if (ticketItems.length === 0) return alert("Agregue al menos un item");
+
+            const res = await fetch(`/attentions/finish/${attId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: ticketItems, notes })
+            });
+
+            if (res.ok) {
+                document.getElementById('finishAttentionModal').style.display = 'none';
+                loadAttentions();
+                alert("Consulta finalizada y Ticket generado.");
+            } else {
+                alert("Error al finalizar");
+            }
+        }
+
+        async function loadFinanceMetrics(period) {
+            const res = await fetch(`/finance/metrics?period=${period}`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('finance-total').innerText = `$${data.total_revenue.toFixed(2)}`;
+                document.getElementById('finance-count').innerText = data.ticket_count;
+                loadTickets();
+            }
+        }
+
+        async function loadTickets() {
+            const res = await fetch('/finance/tickets');
+            if (res.ok) {
+                const data = await res.json();
+                const tbody = document.querySelector('#tickets-table tbody');
+                tbody.innerHTML = '';
+                data.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                <td>#${t.number}</td>
+                <td>${t.date}</td>
+                <td>${t.patient}</td>
+                <td>$${t.total.toFixed(2)}</td>
+                <td><span class="status-tag status-attended">${t.status}</span></td>
+                <td>
+                    <button class="btn" style="padding:0.2rem;" onclick="window.open('/finance/ticket/${t.id}/pdf', '_blank')">📄 PDF</button>
+                </td>
+            `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // Hook into showSection
+        const oldShowSection = window.showSection || function () { };
+        window.showSection = function (id, el) {
+            // Hide all first (basic implementation, assuming original handled logic)
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            // Show target
+            document.getElementById('section-' + id).style.display = 'block';
+            if (el) el.classList.add('active');
+
+            // Logic hooks
+            if (id === 'atenciones') loadAttentions();
+            if (id === 'caja') loadFinanceMetrics('today');
+
+            // Update hash
+            window.location.hash = id;
+        }
+    </script>
 </body>
 
 </html>

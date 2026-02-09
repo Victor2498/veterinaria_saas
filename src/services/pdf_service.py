@@ -272,3 +272,48 @@ def generate_invoice_pdf(org_name, customer_name, items, total):
     doc.build(elements)
     buffer.seek(0)
     return buffer
+
+def generate_ticket_pdf(org, ticket, items, patient, owner, vet):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Header
+    elements.append(Paragraph(f"<b>{org.name}</b>", styles['Title']))
+    elements.append(Paragraph(f"TICKET #{ticket.ticket_number}", styles['Heading2']))
+    elements.append(Paragraph(f"Fecha: {ticket.date.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    elements.append(Paragraph(f"Veterinario: {vet.username}", styles['Normal']))
+    elements.append(Spacer(1, 10))
+    
+    # Patient Info
+    elements.append(Paragraph(f"Paciente: {patient.name} ({patient.species}) | Tutor: {owner.name}", styles['Normal']))
+    elements.append(Spacer(1, 10))
+    
+    # Items Table
+    data = [["Descripción", "Cant", "Precio Unit", "Subtotal"]]
+    for item in items:
+        data.append([item.description, str(item.quantity), f"${item.unit_price:.2f}", f"${item.subtotal:.2f}"])
+    
+    # Result Row ("To Pay")
+    data.append(["", "", "TOTAL", f"${ticket.total_amount:.2f}"])
+    
+    table = Table(data, colWidths=[300, 50, 80, 80])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 12),
+        ('BACKGROUND', (0,1), (-1,-1), colors.beige),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('FONTNAME', (-2,-1), (-1,-1), 'Helvetica-Bold'), # Total row bold
+    ]))
+    elements.append(table)
+    
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("<i>Este ticket es un comprobante interno y no reemplaza un comprobante fiscal.</i>", styles['Italic']))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
