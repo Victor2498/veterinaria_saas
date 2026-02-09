@@ -65,7 +65,10 @@ async def admin_dashboard(request: Request, username: str = Depends(admin_requir
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "org": org,
+            "request": request,
+            "org": org,
             "username": username,
+            "user": user,
             "recent_appointments": recent_res.all(),
             "all_appointments": all_app_res.all(),
             "patients": pat_all_res.all(),
@@ -328,7 +331,7 @@ async def add_clinical_record(request: Request, username: str = Depends(admin_re
         # Verify ownership (Defensive casting and logging)
         print(f"DEBUG: add_clinical_record - patient_id value: {patient_id}, type: {type(patient_id)}")
         pat_res = await session.execute(
-            select(Patient).where(cast(Patient.id, SQLInteger) == int(patient_id), Patient.org_id == org.id)
+            select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
         )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
         
@@ -359,7 +362,7 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
         
         # Verify ownership
         pat_res = await session.execute(
-            select(Patient).where(cast(Patient.id, SQLInteger) == int(patient_id), Patient.org_id == org.id)
+            select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
         )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
         
