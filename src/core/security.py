@@ -78,7 +78,7 @@ def check_plan_feature(current_plan: str, required_feature: str) -> bool:
         "lite": 0,
         "basic": 1,
         "pro": 2,
-        "premium": 2 # Mismo nivel que Pro
+        "premium": 3 # Premium superior a Pro
     }
     
     # Definición de requerimientos mínimos

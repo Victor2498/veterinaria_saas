@@ -50,6 +50,25 @@ async def init_db():
                 print(f"Skipping alteration for {table}.{col}: {e}")
                 await session.rollback()
 
+        # 1.5 Create Indexes
+        indexes = [
+            ("idx_apps_org_status", "appointments", "(org_id, status)"),
+            ("idx_apps_org_date", "appointments", "(org_id, date)"),
+        ]
+        
+        for idx_name, table, columns in indexes:
+            try:
+                # Check if index exists
+                check_idx = f"SELECT indexname FROM pg_indexes WHERE tablename = '{table}' AND indexname = '{idx_name}';"
+                res = await session.execute(text(check_idx))
+                if not res.scalar():
+                    print(f"Creating index {idx_name} on {table}...")
+                    await session.execute(text(f"CREATE INDEX {idx_name} ON {table} {columns};"))
+                    await session.commit()
+            except Exception as e:
+                print(f"Skipping index {idx_name}: {e}")
+                await session.rollback()
+
     # Seed (Only if not already seeded)
     async with AsyncSessionLocal() as session:
         # 1. Check if we have any organizations, if not create default

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint, JSON, Index
 from sqlalchemy.sql import func
 from src.core.database import Base
 
@@ -110,6 +110,12 @@ class Appointment(Base):
     date = Column(DateTime(timezone=True), index=True)
     status = Column(String, default="confirmed", index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Composite index for dashboard filtering
+    __table_args__ = (
+        Index('idx_apps_org_status', 'org_id', 'status'),
+        Index('idx_apps_org_date', 'org_id', 'date'),
+    )
 
 class MedicalAttention(Base):
     __tablename__ = "medical_attentions"

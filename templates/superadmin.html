@@ -231,6 +231,7 @@
                         <option value="lite">Lite (Sin Web Panel)</option>
                         <option value="basic">Básico (Web Panel)</option>
                         <option value="pro">Pro (Vision + Audio + PDF)</option>
+                        <option value="premium">Premium (Certificados Blockchain + Bot IA Full)</option>
                     </select>
                 </div>
                 <button class="btn btn-primary" onclick="createOrg()">Crear Veterinaria</button>
@@ -265,6 +266,9 @@
                                         <option value="basic" {% if org.plan_type=='basic' %}selected{% endif %}>Básico
                                         </option>
                                         <option value="pro" {% if org.plan_type=='pro' %}selected{% endif %}>Pro
+                                        </option>
+                                        <option value="premium" {% if org.plan_type=='premium' %}selected{% endif %}>
+                                            Premium
                                         </option>
                                     </select>
                                 </td>

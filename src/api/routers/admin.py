@@ -138,8 +138,8 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         if not row: raise HTTPException(status_code=404)
         user, org = row
         
-        if org.plan_type != "pro" and not user.is_superadmin:
-            raise HTTPException(status_code=403, detail="Esta función requiere el plan PRO")
+        if org.plan_type not in ["pro", "premium"] and not user.is_superadmin:
+            raise HTTPException(status_code=403, detail="Esta función requiere el plan PRO o superior")
 
         pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
         patient = pat_res.scalar()

@@ -27,7 +27,6 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 # We return OK to avoid retries from WhatsApp if org is dead
                 return {"status": "ignored", "reason": "org_not_found"}
             
-            # Map model to dict for caching
             org_data = {
                 "id": org.id,
                 "name": org.name,
@@ -40,6 +39,19 @@ async def handle_dynamic_webhook(org_slug: str, request: Request, background_tas
                 "plan_type": org.plan_type or "pro"
             }
             await redis_client.set_org_config(org_slug, org_data)
+    
+    # 2. Security Check (Signature/API Key)
+    incoming_key = request.headers.get("apikey")
+    # Only enforce if org has a key configured
+    if org_data.get("evolution_api_key") and incoming_key:
+        if incoming_key != org_data["evolution_api_key"]:
+            print(f"⚠️ Security Warning: Invalid API Key for {org_slug}")
+            return {"status": "forbidden", "reason": "invalid_api_key"}
+    
+    # If no incoming key but org has one, technically we should block, 
+    # but for migration safety we'll just log warning for now.
+    if not incoming_key and org_data.get("evolution_api_key"):
+        print(f"⚠️ Security Warning: Missing API Key header for {org_slug}")
     
     try:
         body = await request.json()
