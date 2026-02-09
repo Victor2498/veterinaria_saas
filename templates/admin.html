@@ -978,12 +978,12 @@
                 vaccineList.appendChild(row);
             });
 
-            // Set PDF links
+            // Set PDF links with cache buster
             const btnHistory = document.getElementById('btnExportHistory');
-            if (btnHistory) btnHistory.onclick = () => window.open(`/admin/export_history/${p.id}`, '_blank');
+            if (btnHistory) btnHistory.onclick = () => window.open(`/admin/export_history/${p.id}?t=${new Date().getTime()}`, '_blank');
 
             const btnVac = document.getElementById('btnExportVac');
-            if (btnVac) btnVac.onclick = () => window.open(`/admin/export_vaccines/${p.id}`, '_blank');
+            if (btnVac) btnVac.onclick = () => window.open(`/admin/export_vaccines/${p.id}?t=${new Date().getTime()}`, '_blank');
 
             // Reset tabs
             switchTab('tab-general', document.querySelector('.tab-btn'));

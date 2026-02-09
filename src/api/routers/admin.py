@@ -316,7 +316,7 @@ async def get_patient_detail_data(patient_id: int, username: str = Depends(admin
 @router.post("/add_clinical_record")
 async def add_clinical_record(request: Request, username: str = Depends(admin_required)):
     data = await request.json()
-    patient_id = data.get("patient_id")
+    patient_id = int(data.get("patient_id"))
     description = data.get("description")
     
     async with AsyncSessionLocal() as session:
@@ -340,7 +340,7 @@ async def add_clinical_record(request: Request, username: str = Depends(admin_re
 @router.post("/add_vaccination")
 async def add_vaccination(request: Request, username: str = Depends(admin_required)):
     data = await request.json()
-    patient_id = data.get("patient_id")
+    patient_id = int(data.get("patient_id"))
     vaccine_name = data.get("vaccine_name")
     next_dose_date = data.get("next_dose_date")
     
