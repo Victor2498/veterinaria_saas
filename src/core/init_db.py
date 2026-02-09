@@ -30,6 +30,12 @@ async def init_db():
             ("organizations", "openai_api_key", "VARCHAR"),
             ("organizations", "plan_type", "VARCHAR DEFAULT 'basic'"),
             ("users", "is_superadmin", "BOOLEAN DEFAULT FALSE"),
+            ("vaccinations", "is_signed", "BOOLEAN DEFAULT FALSE"),
+            ("vaccinations", "signed_at", "TIMESTAMP WITH TIME ZONE"),
+            ("vaccinations", "batch_number", "VARCHAR"),
+            ("vaccinations", "signature_hash", "VARCHAR"),
+            ("vaccinations", "signature_data", "TEXT"),
+            ("vaccinations", "vet_stamp", "TEXT"),
         ]
         
         for table, col, col_type in alterations:

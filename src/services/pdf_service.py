@@ -2,22 +2,25 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image
 from reportlab.lib.units import inch
 from datetime import datetime
 import io
+import qrcode
 
-def _get_base_elements(org_name, title):
+def _get_base_elements(org_name, title, is_premium=False):
     """Helper to create professional header for all PDFs."""
     styles = getSampleStyleSheet()
     elements = []
     
     # Header styled as a professional letterhead
+    header_color = colors.HexColor("#2E5077") if not is_premium else colors.HexColor("#D4AF37") # Gold for premium
+    
     header_style = ParagraphStyle(
         'HeaderStyle',
         parent=styles['Heading1'],
         fontSize=18,
-        textColor=colors.HexColor("#2E5077"),
+        textColor=header_color,
         alignment=1, # Center
         spaceAfter=12
     )
@@ -64,13 +67,23 @@ def generate_clinical_history_pdf(org_name, owner_name, patient_name, records):
     buffer.seek(0)
     return buffer
 
-def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None):
-    """Certificado oficial de vacunación con formato de libreta sanitaria."""
+def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_premium=False, cert_hash=None, verify_url=None):
+    """Certificado oficial de vacunación con formato de libreta sanitaria (Básico y Premium)."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements, styles = _get_base_elements(org_name, "LIBRETA SANITARIA")
+    
+    title = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_premium else "LIBRETA SANITARIA"
+    elements, styles = _get_base_elements(org_name, title, is_premium)
+
+    if is_premium:
+        # Premium Watermark / Badge
+        elements.append(Paragraph("<b>DOCUMENTO OFICIAL VERIFICABLE</b>", ParagraphStyle('PremiumBadge', parent=styles['Normal'], textColor=colors.HexColor("#D4AF37"), alignment=1)))
+        elements.append(Spacer(1, 10))
 
     elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
+    if is_premium and cert_hash:
+        elements.append(Paragraph(f"<font size=8 color=grey>ID Certificado: {cert_hash}</font>", styles['Normal']))
+    
     elements.append(Spacer(1, 15))
 
     # --- SECCIÓN 1: PLAN SANITARIO (VACUNAS) ---
@@ -80,7 +93,12 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     vac_keywords = ["vacuna", "quintuple", "sextuple", "rabia", "tos", "giardia", "leucemia", "parvovirus", "moquillo", "refuerzo", "dosis", "antigena"]
     desp_keywords = ["desparasita", "antiparasit", "pipeta", "comprimido", "simparica", "nexgard", "bravecto", "total full", "totalfull", "drontal", "apredislon", "masticable"]
     
-    vac_data = [["FECHA", "VACUNA", "FIRMA Y SELLO", "PRÓX. VACUNA"]]
+    # Headers logic
+    if is_premium:
+        vac_data = [["FECHA", "VACUNA", "LOTE", "FIRMA VET.", "PRÓX. VACUNA"]]
+    else:
+        vac_data = [["FECHA", "VACUNA", "FIRMA Y SELLO", "PRÓX. VACUNA"]]
+        
     desp_data = [["FECHA", "PESO", "TRATAMIENTO", "FIRMA Y SELLO"]]
     
     has_vac = False
@@ -95,25 +113,40 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         is_desp = any(kw in name_lower for kw in desp_keywords)
         is_vac = any(kw in name_lower for kw in vac_keywords)
         
-        # Si contiene keywords de desparasitación o no es explícitamente una vacuna, 
-        # pero para seguridad priorizamos la clasificación detectada
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
+            # Para desparasitaciones, mantenemos formato simple por ahora
             desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), ""])
             has_desp = True
         else:
-            vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), "", prox])
+            if is_premium:
+                # Premium Row
+                lote = v.batch_number if v.batch_number else "-"
+                firma_placeholder = "Firmado Digitalmente" if v.is_signed else ""
+                # Si tuviéramos imagen de firma, la procesaríamos aquí usarndo reportlab.platypus.Image
+                
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, firma_placeholder, prox])
+            else:
+                # Basic Row
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), "", prox])
             has_vac = True
 
-    # Estilo Naranja/Ocre inspirado en la imagen
-    ocre_color = colors.HexColor("#F9D5B1")
-    ocre_header = colors.HexColor("#E38E49")
+    # Estilos
+    if is_premium:
+        header_bg = colors.HexColor("#D4AF37") # Gold
+        row_bg = colors.HexColor("#FFF8DC") # Cornsilk
+        col_widths_vac = [1*inch, 2*inch, 1*inch, 1.5*inch, 1*inch]
+    else:
+        header_bg = colors.HexColor("#E38E49") # Ocre (Original)
+        row_bg = colors.HexColor("#F9D5B1")
+        col_widths_vac = [1.2*inch, 2.3*inch, 1.8*inch, 1.2*inch]
+
     
     # Renderizar Tabla de Vacunas
     t_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), ocre_header),
+        ('BACKGROUND', (0, 0), (-1, 0), header_bg),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('BACKGROUND', (0, 1), (-1, -1), ocre_color),
+        ('BACKGROUND', (0, 1), (-1, -1), row_bg),
         ('GRID', (0, 0), (-1, -1), 1, colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -124,7 +157,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     ])
 
     if has_vac:
-        t_vac = Table(vac_data, colWidths=[1.2*inch, 2.3*inch, 1.8*inch, 1.2*inch])
+        t_vac = Table(vac_data, colWidths=col_widths_vac)
         t_vac.setStyle(t_style)
         elements.append(t_vac)
     else:
@@ -137,13 +170,53 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     
     if has_desp:
         t_desp = Table(desp_data, colWidths=[1.2*inch, 1*inch, 2.5*inch, 1.8*inch])
-        t_desp.setStyle(t_style)
+        # Reusamos estilo básico para desparasitación siempre por ahora
+        t_desp_style = TableStyle([
+             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#E38E49")),
+             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+             ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#F9D5B1")),
+             ('GRID', (0, 0), (-1, -1), 1, colors.white),
+             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+             ('FONTSIZE', (0, 0), (-1, -1), 9),
+             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+             ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ])
+        
+        t_desp.setStyle(t_desp_style)
         elements.append(t_desp)
     else:
         elements.append(Paragraph("<i>No hay tratamientos de desparasitación registrados.</i>", styles['Normal']))
 
     elements.append(Spacer(1, 40))
-    elements.append(Paragraph("<i>Este documento es un registro oficial de la clínica. Los sellos y firmas físicos validan la aplicación de cada dosis.</i>", styles['Normal']))
+    
+    # Premium QR Code Footer
+    if is_premium and verify_url:
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#D4AF37"), spaceBefore=10, spaceAfter=10))
+        
+        # Generate QR
+        qr = qrcode.QRCode(box_size=4, border=1)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        qr_buffer = io.BytesIO()
+        img.save(qr_buffer, format="PNG")
+        qr_buffer.seek(0)
+        
+        qr_img = Image(qr_buffer, width=1.5*inch, height=1.5*inch)
+        
+        # QR Layout
+        qr_data = [[qr_img, Paragraph(f"<b>VERIFICACIÓN ONLINE</b><br/>Escanee este código para verificar la autenticidad de este certificado.<br/><font size=8>{verify_url}</font>", styles['Normal'])]]
+        qr_table = Table(qr_data, colWidths=[2*inch, 4.5*inch])
+        qr_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (0,0), (0,0), 'CENTER'),
+        ]))
+        elements.append(qr_table)
+    else:
+        elements.append(Paragraph("<i>Este documento es un registro oficial de la clínica. Los sellos y firmas físicos validan la aplicación de cada dosis.</i>", styles['Normal']))
     
     doc.build(elements)
     buffer.seek(0)

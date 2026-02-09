@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint, JSON
 from sqlalchemy.sql import func
 from src.core.database import Base
 
@@ -81,6 +81,24 @@ class Vaccination(Base):
     vaccine_name = Column(String, index=True)
     date_administered = Column(DateTime(timezone=True), server_default=func.now())
     next_dose_date = Column(DateTime(timezone=True), nullable=True, index=True)
+    
+    # Premium features - Signature & Verification
+    is_signed = Column(Boolean, default=False)
+    signed_at = Column(DateTime(timezone=True), nullable=True)
+    batch_number = Column(String, nullable=True)
+    signature_hash = Column(String, nullable=True) # Integrity hash
+    signature_data = Column(Text, nullable=True) # Base64 signature image
+    vet_stamp = Column(Text, nullable=True) # Base64 stamp image
+
+class PremiumCertificate(Base):
+    __tablename__ = "premium_certificates"
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
+    file_hash = Column(String, unique=True, index=True)
+    storage_path = Column(String) # Path in Supabase Storage
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_valid = Column(Boolean, default=True)
 
 class Appointment(Base):
     __tablename__ = "appointments"

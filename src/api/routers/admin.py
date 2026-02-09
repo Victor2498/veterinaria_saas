@@ -307,7 +307,9 @@ async def get_patient_detail_data(patient_id: int, username: str = Depends(admin
                     "id": v.id, 
                     "vaccine_name": v.vaccine_name, 
                     "date": v.date_administered.strftime("%d/%m/%Y"),
-                    "next_dose": v.next_dose_date.strftime("%d/%m/%Y") if v.next_dose_date else "N/A"
+                    "next_dose": v.next_dose_date.strftime("%d/%m/%Y") if v.next_dose_date else "N/A",
+                    "is_signed": v.is_signed,
+                    "batch_number": v.batch_number
                 } 
                 for v in vaccinations
             ]
@@ -347,16 +349,27 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
     vaccine_name = data.get("vaccine_name")
     next_dose_date = data.get("next_dose_date")
     
+    # Premium Fields
+    batch_number = data.get("batch_number")
+    is_signed = data.get("is_signed", False)
+    
     async with AsyncSessionLocal() as session:
         row = await get_org(username, session)
         user, org = row
         
-        # Verify ownership (Defensive casting and logging)
-        print(f"DEBUG: add_vaccination - patient_id value: {patient_id}, type: {type(patient_id)}")
+        # Verify ownership
         pat_res = await session.execute(
             select(Patient).where(cast(Patient.id, SQLInteger) == int(patient_id), Patient.org_id == org.id)
         )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
+        
+        # Validate Premium Signature
+        if is_signed:
+            if org.plan_type != "premium" and not user.is_superadmin:
+                raise HTTPException(status_code=403, detail="La firma digital es exclusiva del Plan Premium")
+            
+            # Here we would normally validate Digital Signature/Stamp
+            # For now, we trust the flag + auth
         
         next_dt = None
         if next_dose_date:
@@ -367,7 +380,10 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
             org_id=org.id,
             patient_id=patient_id,
             vaccine_name=vaccine_name,
-            next_dose_date=next_dt
+            next_dose_date=next_dt,
+            batch_number=batch_number,
+            is_signed=is_signed,
+            signed_at=datetime.now() if is_signed else None
         )
         session.add(new_vac)
         await session.commit()

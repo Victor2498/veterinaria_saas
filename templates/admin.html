@@ -800,54 +800,78 @@
             <!-- Tab: Vacunas -->
             <div id="tab-vacunas" class="tab-content">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
-                    <h3>Plan de Vacunación</h3>
-                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--primary-light);"
-                        onclick="showNewVacForm()">+ Registrar</button>
+                    <h3>Plan Sanitario</h3>
+                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--success);"
+                        onclick="showNewVaccineForm()">+ Nueva Dosis</button>
                 </div>
 
-                <div id="new-vac-form"
-                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary-light);">
-                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                        <input type="text" id="new-vac-name" placeholder="Nombre de vacuna (ej: Sextuple)">
-                        <input type="date" id="new-vac-next" title="Próxima dosis (opcional)">
+                <div id="new-vaccine-form"
+                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary);">
+                    <div class="form-group">
+                        <label>Vacuna / Tratamiento</label>
+                        <input type="text" id="new-vac-name" placeholder="Ej: Quintuple, Rabia, Desparasitación...">
                     </div>
-                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewVac()">Confirmar
-                            Aplicación</button>
+                    <div class="form-group">
+                        <label>Próxima Dosis (Opcional)</label>
+                        <input type="date" id="new-vac-next">
+                    </div>
+
+                    {% if org.plan_type == 'premium' or user.is_superadmin %}
+                    <div class="form-group"
+                        style="background: rgba(212, 175, 55, 0.1); padding: 0.5rem; border-radius: 8px; border: 1px solid #D4AF37;">
+                        <label
+                            style="color: #D4AF37; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="new-vac-signed">
+                            <span>🖋️ Firmar Digitalmente (Premium)</span>
+                        </label>
+                        <input type="text" id="new-vac-batch" placeholder="Lote / Serie (Requerido si firma)"
+                            style="display: none; margin-top: 0.5rem; font-size: 0.9rem;">
+                    </div>
+                    {% endif %}
+
+                    <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewVaccine()">Guardar
+                            Registro</button>
                         <button class="btn"
                             style="flex:1; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
-                            onclick="hideNewVacForm()">Cancelar</button>
+                            onclick="hideNewVaccineForm()">Cancelar</button>
                     </div>
                 </div>
 
-                <table id="vaccine-table">
-                    <thead>
-                        <tr>
-                            <th>Vacuna</th>
-                            <th>Fecha</th>
-                            <th>Sig. Dosis</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vaccine-list">
-                        <!-- Se llena con JS -->
-                    </tbody>
-                </table>
+                <div id="vaccine-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Se llena con JS -->
+                </div>
 
-                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                    {% if org.plan_type == 'pro' or org.plan_type == 'premium' %}
+                <div
+                    style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+
+                    <!-- Botón Básico (Siempre visible para planes pagos) -->
+                    {% if org.plan_type != 'lite' %}
+                    <button class="btn" style="width: 100%; background: var(--card); border: 1px solid var(--primary);"
+                        onclick="window.location.href='/admin/export_vaccines/'+document.getElementById('editPatId').value">
+                        📒 Descargar Libreta (Simple)
+                    </button>
+                    {% endif %}
+
+                    <!-- Botón Premium -->
+                    {% if org.plan_type == 'premium' or user.is_superadmin %}
                     <button class="btn"
-                        style="width: 100%; background: var(--card); border: 1px solid var(--primary-light);"
-                        id="btnExportVac">💉 Descargar Certificado (PDF)</button>
+                        style="width: 100%; background: linear-gradient(135deg, #D4AF37, #F9D5B1); color: #1e293b !important; font-weight: 700; border: none;"
+                        onclick="generatePremiumCert()">
+                        🏅 Generar Certificado Premium
+                    </button>
                     {% else %}
                     <button class="btn"
                         style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
-                        onclick="alert('Mejora a PRO para descargar Certificados')">🔒 PDF bloqueado (Plan {{
-                        org.plan_type.upper() }})</button>
+                        onclick="alert('Mejora a PREMIUM para certificados verificables')">
+                        🔒 Certificado Premium (Bloqueado)
+                    </button>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
+
 
     <script>
         function showSection(sectionId, element) {
@@ -967,8 +991,16 @@
             vaccineList.innerHTML = data.vaccinations.length ? '' : '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Sin vacunas registradas</td></tr>';
             data.vaccinations.forEach(v => {
                 const row = document.createElement('tr');
+                let nameHtml = `<strong>${v.vaccine_name}</strong>`;
+                if (v.is_signed) {
+                    nameHtml += ` <span title="Firmado Digitalmente" style="cursor:help;">🏅</span>`;
+                }
+                if (v.batch_number) {
+                    nameHtml += `<br><span style="font-size:0.75rem; color: #b45309;">Lote: ${v.batch_number}</span>`;
+                }
+
                 row.innerHTML = `
-                    <td><strong>${v.vaccine_name}</strong></td>
+                    <td>${nameHtml}</td>
                     <td>${v.date}</td>
                     <td><span class="badge" style="background:var(--sidebar-hover); color:var(--primary);">${v.next_dose}</span></td>
                     <td style="text-align:right;">
@@ -1259,6 +1291,110 @@
                 showSection('dashboard', document.querySelector('.nav-item[onclick*="dashboard"]'));
             }
         })();
+        // --- Premium Vaccination Logic ---
+        document.getElementById('new-vac-signed')?.addEventListener('change', function (e) {
+            document.getElementById('new-vac-batch').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        function showNewVaccineForm() { document.getElementById('new-vaccine-form').style.display = 'block'; }
+        function hideNewVaccineForm() {
+            document.getElementById('new-vaccine-form').style.display = 'none';
+            document.getElementById('new-vac-name').value = '';
+            document.getElementById('new-vac-next').value = '';
+            if (document.getElementById('new-vac-signed')) {
+                document.getElementById('new-vac-signed').checked = false;
+                document.getElementById('new-vac-batch').style.display = 'none';
+                document.getElementById('new-vac-batch').value = '';
+            }
+        }
+
+        async function submitNewVaccine() {
+            const pid = document.getElementById('editPatId').value;
+            const name = document.getElementById('new-vac-name').value;
+            const next = document.getElementById('new-vac-next').value;
+
+            let isSigned = false;
+            let batch = null;
+
+            const signedInfo = document.getElementById('new-vac-signed');
+            if (signedInfo && signedInfo.checked) {
+                isSigned = true;
+                batch = document.getElementById('new-vac-batch').value;
+                if (!batch) {
+                    alert("El número de lote es obligatorio para firmas digitales.");
+                    return;
+                }
+            }
+
+            if (!name) return alert("Nombre requerido");
+
+            try {
+                const res = await fetch('/admin/add_vaccination', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: pid,
+                        vaccine_name: name,
+                        next_dose_date: next,
+                        is_signed: isSigned,
+                        batch_number: batch
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    hideNewVaccineForm();
+                    // Reload patient data to refresh the list
+                    openEditPatientModal(pid);
+                } else {
+                    alert(data.detail || "Error al guardar");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            }
+        }
+
+        async function generatePremiumCert() {
+            const pid = document.getElementById('editPatId').value;
+            if (!confirm("¿Generar Certificado Premium Oficial? Esto creará un registro inmutable.")) return;
+
+            try {
+                const btn = event.target || document.querySelector('button[onclick="generatePremiumCert()"]');
+                const originalText = btn.innerText;
+                btn.innerText = "Generando...";
+                btn.disabled = true;
+
+                const res = await fetch(`/admin/certificates/generate_premium/${pid}`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    // Success! 
+                    if (confirm("✅ Certificado Generado Exitosamente.\n¿Desea ENVIARLO POR WHATSAPP al dueño ahora?")) {
+                        // Send via WhatsApp
+                        const waRes = await fetch(`/admin/certificates/send_whatsapp/${data.cert_hash}`, { method: 'POST' });
+                        const waData = await waRes.json();
+                        if (waData.status === 'success') {
+                            alert("📨 Enviado por WhatsApp correctamente.");
+                        } else {
+                            alert("⚠️ Error al enviar WhatsApp: " + (waData.detail || "Desconocido"));
+                        }
+                    }
+
+                    if (confirm("¿Desea VER el certificado PDF ahora?")) {
+                        window.open(data.verify_url, '_blank');
+                    }
+                } else {
+                    alert(data.detail || "Error generando certificado");
+                }
+
+                btn.innerText = originalText;
+                btn.disabled = false;
+
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            }
+        }
     </script>
     <!-- Service Modal -->
     <div id="serviceModal" class="modal">

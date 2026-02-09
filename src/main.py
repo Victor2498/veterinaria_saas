@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from src.api.routers import auth, admin, webhooks, superadmin
+from src.api.routers import auth, admin, webhooks, superadmin, certificates, verify
 import os
 
 app = FastAPI(title="DogBot SaaS Universal")
@@ -25,3 +25,5 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(superadmin.router) # SaaS Owner Panel
 app.include_router(webhooks.router)
+app.include_router(certificates.router)
+app.include_router(verify.router)
