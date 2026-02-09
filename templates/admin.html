@@ -289,6 +289,49 @@
             font-weight: 700;
         }
 
+        .status-badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-waiting {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border-color: #f59e0b;
+        }
+
+        .status-attended {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: #10b981;
+        }
+
+        .status-cancelled {
+            background: rgba(244, 63, 94, 0.1);
+            color: #f43f5e;
+            border-color: #f43f5e;
+        }
+
+        .status-confirmed {
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+            border-color: #6366f1;
+        }
+
+        .status-select {
+            background: var(--bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
+        }
+
         /* Modal Base */
         .modal {
             display: none;
@@ -450,7 +493,19 @@
                                     {{ row.Appointment.pet_name }}</strong></td>
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td><span style="color: var(--success);">Confirmado</span></td>
+                            <td>
+                                <select class="status-select status-{{ row.Appointment.status }}"
+                                    onchange="updateAppointmentStatus('{{ row.Appointment.id }}', this.value)">
+                                    <option value="confirmed" {% if row.Appointment.status=='confirmed' %}selected{%
+                                        endif %}>Confirmado</option>
+                                    <option value="waiting" {% if row.Appointment.status=='waiting' %}selected{% endif
+                                        %}>En espera</option>
+                                    <option value="attended" {% if row.Appointment.status=='attended' %}selected{% endif
+                                        %}>Atendido</option>
+                                    <option value="cancelled" {% if row.Appointment.status=='cancelled' %}selected{%
+                                        endif %}>Suspendido</option>
+                                </select>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -487,7 +542,19 @@
                             <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
                             <td>{{ row.Appointment.reason or 'Consulta General' }}</td>
                             <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td><span style="color: var(--success);">Confirmado</span></td>
+                            <td>
+                                <select class="status-select status-{{ row.Appointment.status }}"
+                                    onchange="updateAppointmentStatus('{{ row.Appointment.id }}', this.value)">
+                                    <option value="confirmed" {% if row.Appointment.status=='confirmed' %}selected{%
+                                        endif %}>Confirmado</option>
+                                    <option value="waiting" {% if row.Appointment.status=='waiting' %}selected{% endif
+                                        %}>En espera</option>
+                                    <option value="attended" {% if row.Appointment.status=='attended' %}selected{% endif
+                                        %}>Atendido</option>
+                                    <option value="cancelled" {% if row.Appointment.status=='cancelled' %}selected{%
+                                        endif %}>Suspendido</option>
+                                </select>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -544,6 +611,11 @@
                                         style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
                                         onclick="openEditPatientModal('{{ row.Patient.id }}')">
                                         👁️ Ver Detalle</button>
+
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid #f43f5e; color: #f43f5e !important;"
+                                        onclick="deletePatient('{{ row.Patient.id }}', '{{ row.Patient.name }}')">
+                                        🗑️ Eliminar</button>
                                 </div>
                             </td>
                         </tr>
@@ -973,6 +1045,40 @@
                     searchInput.value = name;
                     // Opcional: disparar evento de búsqueda si lo implementas
                 }
+            }
+        }
+
+        async function updateAppointmentStatus(id, newStatus) {
+            const res = await fetch(`/admin/update_appointment_status/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                // Success - the class will be updated on reload, 
+                // but we can update it immediately for better UX
+                location.reload();
+            } else {
+                alert('Error al actualizar el estado de la cita');
+            }
+        }
+
+        async function deletePatient(id, name) {
+            if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${name}"? Se borrarán también todos sus registros médicos y vacunas.`)) {
+                return;
+            }
+
+            const res = await fetch(`/admin/delete_patient/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert('Paciente eliminado correctamente');
+                location.reload();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + (err.detail || 'No se pudo eliminar al paciente.'));
             }
         }
 

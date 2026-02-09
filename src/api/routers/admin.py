@@ -398,3 +398,48 @@ async def update_vaccination(vac_id: int, request: Request, username: str = Depe
             
         await session.commit()
         return {"status": "success"}
+@router.post("/update_appointment_status/{appointment_id}")
+async def update_appointment_status(appointment_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    new_status = data.get("status")
+    
+    if new_status not in ["confirmed", "attended", "waiting", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Estado inválido")
+        
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        app_res = await session.execute(
+            select(Appointment).where(Appointment.id == appointment_id, Appointment.org_id == org.id)
+        )
+        appointment = app_res.scalar()
+        if not appointment: raise HTTPException(status_code=404)
+        
+        appointment.status = new_status
+        await session.commit()
+        return {"status": "success", "message": f"Estado de la cita actualizado a {new_status}"}
+
+@router.delete("/delete_patient/{patient_id}")
+async def delete_patient(patient_id: int, username: str = Depends(admin_required)):
+    async with AsyncSessionLocal() as session:
+        row = await get_org(username, session)
+        user, org = row
+        
+        # Verify ownership and get patient
+        pat_res = await session.execute(
+            select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id)
+        )
+        patient = pat_res.scalar()
+        if not patient: raise HTTPException(status_code=404, detail="Paciente no encontrado")
+        
+        # Manually delete related records to ensure clean deletion (Cascading might be handled by DB, but being explicit is safer)
+        from sqlalchemy import delete
+        await session.execute(delete(ClinicalRecord).where(ClinicalRecord.patient_id == patient_id))
+        await session.execute(delete(Vaccination).where(Vaccination.patient_id == patient_id))
+        
+        # Now delete the patient
+        await session.delete(patient)
+        await session.commit()
+        
+        return {"status": "success", "message": "Paciente y registros relacionados eliminados correctamente"}
