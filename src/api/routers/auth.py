@@ -44,7 +44,13 @@ async def login_handle(request: Request):
                 access_token = create_access_token(data={"sub": username})
                 target_url = "/superadmin" if user.is_superadmin else "/admin"
                 response = RedirectResponse(url=target_url, status_code=303)
-                response.set_cookie(key="admin_token", value=access_token, httponly=True)
+                response.set_cookie(
+                    key="admin_token", 
+                    value=access_token, 
+                    httponly=True, 
+                    max_age=86400,  # 24 horas
+                    samesite="lax"
+                )
                 return response
 
     return templates.TemplateResponse("login.html", {"request": request, "error": "Credenciales inválidas"})
