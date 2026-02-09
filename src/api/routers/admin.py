@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from src.core.database import AsyncSessionLocal
 from src.core.security import admin_required
 from src.models.models import User, Organization, Appointment, Patient, Owner, Service
-from sqlalchemy import select, cast, Integer as SQLInteger
+from sqlalchemy import select, cast, Integer as SQLInteger, func
 from datetime import datetime
 import io
 import csv
