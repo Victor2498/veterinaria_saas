@@ -1085,7 +1085,7 @@
 
             if (res.ok) {
                 alert('¡Paciente actualizado!');
-                location.reload();
+                window.location.href = window.location.href; // Preserva el hash
             } else {
                 alert('Error al guardar cambios.');
             }
@@ -1119,7 +1119,7 @@
             if (res.ok) {
                 // Success - the class will be updated on reload, 
                 // but we can update it immediately for better UX
-                location.reload();
+                window.location.href = window.location.href; // Preserva el hash
             } else {
                 alert('Error al actualizar el estado de la cita');
             }
@@ -1136,7 +1136,7 @@
 
             if (res.ok) {
                 alert('Paciente eliminado correctamente');
-                location.reload();
+                window.location.href = window.location.href; // Preserva el hash
             } else {
                 const err = await res.json();
                 alert('Error: ' + (err.detail || 'No se pudo eliminar al paciente.'));
@@ -1194,7 +1194,7 @@
             });
 
             if (res.ok) {
-                location.reload();
+                window.location.href = window.location.href; // Preserva el hash
             } else {
                 alert('Error al guardar el servicio');
             }
@@ -1204,7 +1204,7 @@
             if (!confirm(`¿Estás seguro de borrar el servicio "${name}"?`)) return;
             const res = await fetch(`/admin/delete_service/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                location.reload();
+                window.location.href = window.location.href; // Preserva el hash
             } else {
                 alert('Error al eliminar');
             }
