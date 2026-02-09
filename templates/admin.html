@@ -538,16 +538,7 @@
                             </td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    {% if org.plan_type in ['pro', 'premium'] %}
-                                    <a href="/admin/export_history/{{ row.Patient.id }}" class="btn"
-                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary);">📜
-                                        Historia</a>
-                                    {% else %}
-                                    <button class="btn"
-                                        onclick="alert('La Historia Clínica Completa es una función PRO. ¡Mejora tu plan para activar!')"
-                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--text-dim); color: var(--text-dim) !important; opacity: 0.6; cursor: not-allowed;">🔒
-                                        Historia</button>
-                                    {% endif %}
+
 
                                     <button class="btn"
                                         style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
