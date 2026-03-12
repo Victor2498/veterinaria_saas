@@ -13,25 +13,23 @@ class StorageService:
             self.bucket_name = "certificados"
 
     def upload_file(self, file_bytes: bytes, path: str, content_type: str = "application/pdf"):
-        """Sube un archivo a Supabase Storage."""
+        """Sube un archivo a Supabase Storage. Retorna (resultado, error_msg)"""
         if not self.supabase:
-            return None
+            return None, "Supabase client not initialized"
             
         try:
-            # Check if bucket exists, create if not (optional, usually manual setup)
-            # For now assume bucket exists
-            
             res = self.supabase.storage.from_(self.bucket_name).upload(
                 file=file_bytes,
                 path=path,
                 file_options={"content-type": content_type, "upsert": True}
             )
-            return res
+            return res, None
         except Exception as e:
             import traceback
-            print(f"Error uploading to Supabase: {str(e)}")
+            err_msg = str(e)
+            print(f"Error uploading to Supabase: {err_msg}")
             traceback.print_exc()
-            return None
+            return None, err_msg
 
     def get_public_url(self, path: str):
         """Obtiene la URL pública del archivo."""

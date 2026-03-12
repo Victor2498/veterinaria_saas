@@ -69,11 +69,10 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
 
         # 5. Store in Supabase
         file_path = f"certificates/{org.id}/{patient.id}/{cert_hash}.pdf"
-        storage_res = storage_service.upload_file(pdf_buffer.getvalue(), file_path)
+        storage_res, error_msg = storage_service.upload_file(pdf_buffer.getvalue(), file_path)
         
         if not storage_res:
-            # Fallback if storage fails? For now, raise error
-             raise HTTPException(status_code=503, detail="Error almacenando el certificado en la nube")
+             raise HTTPException(status_code=503, detail=f"Error en almacenamiento: {error_msg}")
 
         # 6. Save Metadata to DB
         new_cert = DigitalCertificate(
