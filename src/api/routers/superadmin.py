@@ -140,7 +140,7 @@ async def global_stats(username: str = Depends(superadmin_only)):
         }
 @router.post("/change_plan/{org_id}")
 async def change_plan(org_id: int, request: Request, username: str = Depends(superadmin_only)):
-    """Cambia el plan de una veterinaria (basic, pro, premium)"""
+    """Cambia el plan de una veterinaria (lite, basic, pro)"""
     data = await request.json()
     new_plan = data.get("plan")
     

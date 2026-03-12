@@ -160,7 +160,7 @@ async def finish_attention(att_id: int, request: Request, username: str = Depend
             
         await session.commit()
         
-        # 4. Premium: Generate PDF (Async task or immediate return?)
+        # 4. Pro: Generate PDF (Async task or immediate return?)
         # For now, just return success and let frontend call generate_pdf endpoint
         
         return {"status": "success", "ticket_id": ticket.id}

@@ -787,7 +787,7 @@
                 </div>
 
                 <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                    {% if org.plan_type == 'pro' or org.plan_type == 'premium' %}
+                    {% if org.plan_type == 'pro' %}
                     <button class="btn" style="width: 100%; background: var(--card); border: 1px solid var(--primary);"
                         id="btnExportHistory">📜 Descargar Historia Clínica (PDF)</button>
                     {% else %}
@@ -818,13 +818,13 @@
                         <input type="date" id="new-vac-next">
                     </div>
 
-                    {% if org.plan_type == 'premium' or user.is_superadmin %}
+                    {% if org.plan_type == 'pro' or user.is_superadmin %}
                     <div class="form-group"
                         style="background: rgba(212, 175, 55, 0.1); padding: 0.5rem; border-radius: 8px; border: 1px solid #D4AF37;">
                         <label
                             style="color: #D4AF37; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                             <input type="checkbox" id="new-vac-signed">
-                            <span>🖋️ Firmar Digitalmente (Premium)</span>
+                            <span>🖋️ Firmar Digitalmente (Pro)</span>
                         </label>
                         <input type="text" id="new-vac-batch" placeholder="Lote / Serie (Requerido si firma)"
                             style="display: none; margin-top: 0.5rem; font-size: 0.9rem;">
@@ -856,17 +856,17 @@
                     {% endif %}
 
                     <!-- Botón Premium -->
-                    {% if org.plan_type == 'premium' or user.is_superadmin %}
+                    {% if org.plan_type == 'pro' or user.is_superadmin %}
                     <button class="btn"
                         style="width: 100%; background: linear-gradient(135deg, #D4AF37, #F9D5B1); color: #1e293b !important; font-weight: 700; border: none;"
-                        onclick="generatePremiumCert()">
-                        🏅 Generar Certificado Premium
+                        onclick="generateDigitalCert()">
+                        🏅 Generar Certificado Digital
                     </button>
                     {% else %}
                     <button class="btn"
                         style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
-                        onclick="alert('Mejora a PREMIUM para certificados verificables')">
-                        🔒 Certificado Premium (Bloqueado)
+                        onclick="alert('Mejora a PRO para certificados verificables')">
+                        🔒 Certificado Digital (Bloqueado)
                     </button>
                     {% endif %}
                 </div>
@@ -1356,17 +1356,17 @@
             }
         }
 
-        async function generatePremiumCert() {
+        async function generateDigitalCert() {
             const pid = document.getElementById('editPatId').value;
-            if (!confirm("¿Generar Certificado Premium Oficial? Esto creará un registro inmutable.")) return;
+            if (!confirm("¿Generar Certificado Digital Oficial? Esto creará un registro inmutable.")) return;
 
             try {
-                const btn = event.target || document.querySelector('button[onclick="generatePremiumCert()"]');
+                const btn = event.target || document.querySelector('button[onclick="generateDigitalCert()"]');
                 const originalText = btn.innerText;
                 btn.innerText = "Generando...";
                 btn.disabled = true;
 
-                const res = await fetch(`/admin/certificates/generate_premium/${pid}`, { method: 'POST' });
+                const res = await fetch(`/admin/certificates/generate_digital/${pid}`, { method: 'POST' });
                 const data = await res.json();
 
                 if (data.status === 'success') {

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.core.security import admin_required
 from src.core.database import AsyncSessionLocal
-from src.models.models import User, Organization, Patient, Vaccination, PremiumCertificate
+from src.models.models import User, Organization, Patient, Vaccination, DigitalCertificate
 from src.services.pdf_service import generate_vaccination_certificate
 from src.services.storage import storage_service
 from sqlalchemy import select
@@ -12,9 +12,9 @@ import uuid
 
 router = APIRouter(prefix="/certificates", dependencies=[Depends(admin_required)])
 
-@router.post("/generate_premium/{patient_id}")
-async def generate_premium_certificate(patient_id: int, request: Request, username: str = Depends(admin_required)):
-    """Genera, almacena y retorna un certificado Premium."""
+@router.post("/generate_digital/{patient_id}")
+async def generate_digital_certificate(patient_id: int, request: Request, username: str = Depends(admin_required)):
+    """Genera, almacena y retorna un certificado Digital."""
     async with AsyncSessionLocal() as session:
         # 1. Auth & Plan Check
         res = await session.execute(
@@ -26,8 +26,8 @@ async def generate_premium_certificate(patient_id: int, request: Request, userna
         if not row: raise HTTPException(status_code=401)
         user, org = row
 
-        if org.plan_type != "premium" and not user.is_superadmin:
-            raise HTTPException(status_code=403, detail="Esta función es exclusiva del Plan Premium")
+        if org.plan_type != "pro" and not user.is_superadmin:
+            raise HTTPException(status_code=403, detail="Esta función es exclusiva del Plan Pro")
 
         # 2. Get Data
         pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
@@ -59,7 +59,7 @@ async def generate_premium_certificate(patient_id: int, request: Request, userna
                 patient_name=patient.name,
                 vaccinations=vaccinations,
                 patient_weight=patient.weight,
-                is_premium=True,
+                is_digital=True,
                 cert_hash=cert_hash,
                 verify_url=verify_url
             )
@@ -76,7 +76,7 @@ async def generate_premium_certificate(patient_id: int, request: Request, userna
              raise HTTPException(status_code=503, detail="Error almacenando el certificado en la nube")
 
         # 6. Save Metadata to DB
-        new_cert = PremiumCertificate(
+        new_cert = DigitalCertificate(
             org_id=org.id,
             patient_id=patient.id,
             file_hash=cert_hash,
@@ -90,13 +90,13 @@ async def generate_premium_certificate(patient_id: int, request: Request, userna
 
 @router.get("/download/{cert_hash}")
 async def download_certificate(cert_hash: str, username: str = Depends(admin_required)):
-    """Descarga un certificado Premium almacenado."""
+    """Descarga un certificado Digital almacenado."""
     async with AsyncSessionLocal() as session:
         # Check permissions (basic valid user check is enough, or strictly org check)
         # Ideally, we verify the user belongs to the org of the cert.
         pass # Optimization: implement fetch
 
-        cert_res = await session.execute(select(PremiumCertificate).where(PremiumCertificate.file_hash == cert_hash))
+        cert_res = await session.execute(select(DigitalCertificate).where(DigitalCertificate.file_hash == cert_hash))
         cert = cert_res.scalar()
         if not cert: raise HTTPException(status_code=404)
 
@@ -121,11 +121,11 @@ async def send_certificate_whatsapp(cert_hash: str, username: str = Depends(admi
     async with AsyncSessionLocal() as session:
         # 1. Get Cert and related info
         stmt = (
-            select(PremiumCertificate, Patient, Owner, Organization)
-            .join(Patient, PremiumCertificate.patient_id == Patient.id)
+            select(DigitalCertificate, Patient, Owner, Organization)
+            .join(Patient, DigitalCertificate.patient_id == Patient.id)
             .join(Owner, Patient.owner_id == Owner.id)
-            .join(Organization, PremiumCertificate.org_id == Organization.id)
-            .where(PremiumCertificate.file_hash == cert_hash)
+            .join(Organization, DigitalCertificate.org_id == Organization.id)
+            .where(DigitalCertificate.file_hash == cert_hash)
         )
         res = await session.execute(stmt)
         row = res.first()
@@ -145,7 +145,7 @@ async def send_certificate_whatsapp(cert_hash: str, username: str = Depends(admi
         if not owner.phone_number:
             raise HTTPException(status_code=400, detail="El dueño no tiene número de teléfono registrado")
 
-        caption = f"Hola {owner.name or ''}, adjuntamos el Certificado de Vacunación Premium de {patient.name}. 🐾\nVerificable online."
+        caption = f"Hola {owner.name or ''}, adjuntamos el Certificado de Vacunación Digital de {patient.name}. 🐾\nVerificable online."
         
         # Call service
         result = await send_whatsapp_document(

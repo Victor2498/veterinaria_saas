@@ -87,8 +87,8 @@ async def get_ticket_pdf(ticket_id: int, username: str = Depends(admin_required)
     async with AsyncSessionLocal() as session:
         user, org = await get_org(username, session)
         
-        if org.plan_type != 'premium' and not user.is_superadmin:
-             raise HTTPException(status_code=403, detail="Tickets PDF disponibles solo en Plan Premium")
+        if org.plan_type != 'pro' and not user.is_superadmin:
+             raise HTTPException(status_code=403, detail="Tickets PDF disponibles solo en Plan Pro")
 
         # Fetch Ticket Data
         t_res = await session.execute(

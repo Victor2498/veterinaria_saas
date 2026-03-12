@@ -7,13 +7,13 @@ from datetime import datetime
 import io
 import qrcode
 
-def _get_base_elements(org_name, title, is_premium=False):
+def _get_base_elements(org_name, title, is_digital=False):
     """Helper to create professional header for all PDFs."""
     styles = getSampleStyleSheet()
     elements = []
     
     # Header styled as a professional letterhead
-    header_color = colors.HexColor("#2E5077") if not is_premium else colors.HexColor("#D4AF37") # Gold for premium
+    header_color = colors.HexColor("#2E5077") if not is_digital else colors.HexColor("#D4AF37") # Gold for digital
     
     header_style = ParagraphStyle(
         'HeaderStyle',
@@ -66,21 +66,21 @@ def generate_clinical_history_pdf(org_name, owner_name, patient_name, records):
     buffer.seek(0)
     return buffer
 
-def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_premium=False, cert_hash=None, verify_url=None):
-    """Certificado oficial de vacunación con formato de libreta sanitaria (Básico y Premium)."""
+def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_digital=False, cert_hash=None, verify_url=None):
+    """Certificado oficial de vacunación con formato de libreta sanitaria (Básico y Digital)."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     
-    title = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_premium else "LIBRETA SANITARIA"
-    elements, styles = _get_base_elements(org_name, title, is_premium)
+    title = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_digital else "LIBRETA SANITARIA"
+    elements, styles = _get_base_elements(org_name, title, is_digital)
 
-    if is_premium:
-        # Premium Watermark / Badge
-        elements.append(Paragraph("<b>DOCUMENTO OFICIAL VERIFICABLE</b>", ParagraphStyle('PremiumBadge', parent=styles['Normal'], textColor=colors.HexColor("#D4AF37"), alignment=1)))
+    if is_digital:
+        # Digital Watermark / Badge
+        elements.append(Paragraph("<b>DOCUMENTO OFICIAL VERIFICABLE</b>", ParagraphStyle('DigitalBadge', parent=styles['Normal'], textColor=colors.HexColor("#D4AF37"), alignment=1)))
         elements.append(Spacer(1, 10))
 
     elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
-    if is_premium and cert_hash:
+    if is_digital and cert_hash:
         elements.append(Paragraph(f"<font size=8 color=grey>ID Certificado: {cert_hash}</font>", styles['Normal']))
     
     elements.append(Spacer(1, 15))
@@ -93,7 +93,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     desp_keywords = ["desparasita", "antiparasit", "pipeta", "comprimido", "simparica", "nexgard", "bravecto", "total full", "totalfull", "drontal", "apredislon", "masticable"]
     
     # Headers logic
-    if is_premium:
+    if is_digital:
         vac_data = [["FECHA", "VACUNA", "LOTE", "FIRMA VET.", "PRÓX. VACUNA"]]
     else:
         vac_data = [["FECHA", "VACUNA", "FIRMA Y SELLO", "PRÓX. VACUNA"]]
@@ -115,8 +115,8 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
             desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), ""])
             has_desp = True
         else:
-            if is_premium:
-                # Premium Row
+            if is_digital:
+                # Digital Row
                 lote = v.batch_number if v.batch_number else "-"
                 firma_placeholder = "Firmado Digitalmente" if v.is_signed else ""
                 # Si tuviéramos imagen de firma, la procesaríamos aquí usarndo reportlab.platypus.Image
@@ -128,7 +128,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
             has_vac = True
 
     # Estilos
-    if is_premium:
+    if is_digital:
         header_bg = colors.HexColor("#D4AF37") # Gold
         row_bg = colors.HexColor("#FFF8DC") # Cornsilk
         col_widths_vac = [1*inch, 2*inch, 1*inch, 1.5*inch, 1*inch]
@@ -187,8 +187,8 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
 
     elements.append(Spacer(1, 40))
     
-    # Premium QR Code Footer
-    if is_premium and verify_url:
+    # Digital QR Code Footer
+    if is_digital and verify_url:
         elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#D4AF37"), spaceBefore=10, spaceAfter=10))
         
         # Generate QR

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from src.core.database import AsyncSessionLocal
-from src.models.models import PremiumCertificate, Patient, Organization
+from src.models.models import DigitalCertificate, Patient, Organization
 from sqlalchemy import select
 
 router = APIRouter()
@@ -14,7 +14,7 @@ async def verify_certificate(request: Request, cert_hash: str):
     async with AsyncSessionLocal() as session:
         # 1. Buscar Certificado
         cert_res = await session.execute(
-            select(PremiumCertificate).where(PremiumCertificate.file_hash == cert_hash)
+            select(DigitalCertificate).where(DigitalCertificate.file_hash == cert_hash)
         )
         cert = cert_res.scalar()
         

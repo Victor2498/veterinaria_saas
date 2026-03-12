@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text, UniqueConstraint, Index
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.core.database import Base
 
@@ -10,14 +11,26 @@ class Organization(Base):
     is_active = Column(Boolean, default=True)
     
     # SaaS Config per Org
-    evolution_api_url = Column(String, nullable=True) # https://api.midominio.com
-    evolution_api_key = Column(String, nullable=True) # API Key global de Evolution
-    evolution_instance = Column(String, nullable=True) # Nombre de la instancia (ej: DogBot)
-    openai_api_key = Column(String, nullable=True) # Opcional: llave propia por org
-    plan_type = Column(String, default="basic") # basic, pro, premium
-    google_calendar_id = Column(String, nullable=True) # ID del calendario de Google (gmail o ID repo)
+    evolution_api_url = Column(String, nullable=True)
+    evolution_api_key = Column(String, nullable=True)
+    evolution_instance = Column(String, nullable=True)
+    openai_api_key = Column(String, nullable=True)
+    plan_type = Column(String, default="basic") # lite, basic, pro
+    google_calendar_id = Column(String, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    users = relationship("User", back_populates="organization")
+    services = relationship("Service", back_populates="organization")
+    owners = relationship("Owner", back_populates="organization")
+    patients = relationship("Patient", back_populates="organization")
+    appointments = relationship("Appointment", back_populates="organization")
+    clinical_records = relationship("ClinicalRecord", back_populates="organization")
+    vaccinations = relationship("Vaccination", back_populates="organization")
+    digital_certificates = relationship("DigitalCertificate", back_populates="organization")
+    medical_attentions = relationship("MedicalAttention", back_populates="organization")
+    tickets = relationship("Ticket", back_populates="organization")
 
 class User(Base):
     __tablename__ = "users"
@@ -28,6 +41,9 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False)
 
+    organization = relationship("Organization", back_populates="users")
+    attentions = relationship("MedicalAttention", back_populates="vet")
+
 class Service(Base):
     __tablename__ = "services"
     id = Column(Integer, primary_key=True, index=True)
@@ -37,31 +53,44 @@ class Service(Base):
     description = Column(Text, nullable=True)
     category = Column(String, index=True)
 
+    organization = relationship("Organization", back_populates="services")
+
 class Owner(Base):
     __tablename__ = "owners"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    phone_number = Column(String, index=True) # Index for fast owner lookup
-    name = Column(String, nullable=True, index=True) # Index for name search
+    phone_number = Column(String, index=True)
+    name = Column(String, nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     __table_args__ = (UniqueConstraint('org_id', 'phone_number', name='_org_phone_uc'),)
+
+    organization = relationship("Organization", back_populates="owners")
+    patients = relationship("Patient", back_populates="owner")
 
 class Patient(Base):
     __tablename__ = "patients"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    name = Column(String, index=True) # Index for fast patient search
+    name = Column(String, index=True)
     species = Column(String) 
     owner_id = Column(Integer, ForeignKey("owners.id"), index=True)
     medical_history_link = Column(String, nullable=True)
     breed = Column(String, nullable=True)
     birth_date = Column(DateTime(timezone=True), nullable=True)
     weight = Column(Float, nullable=True)
-    height = Column(Float, nullable=True) # Altura en cm
+    height = Column(Float, nullable=True)
     sex = Column(String, nullable=True)
     
     __table_args__ = (UniqueConstraint('org_id', 'owner_id', 'name', name='_org_owner_pet_uc'),)
+
+    organization = relationship("Organization", back_populates="patients")
+    owner = relationship("Owner", back_populates="patients")
+    vaccinations = relationship("Vaccination", back_populates="patient")
+    clinical_records = relationship("ClinicalRecord", back_populates="patient")
+    appointments = relationship("Appointment", back_populates="patient")
+    digital_certificates = relationship("DigitalCertificate", back_populates="patient")
+    attentions = relationship("MedicalAttention", back_populates="patient")
 
 class ClinicalRecord(Base):
     __tablename__ = "clinical_records"
@@ -73,6 +102,9 @@ class ClinicalRecord(Base):
     vet_name = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    organization = relationship("Organization", back_populates="clinical_records")
+    patient = relationship("Patient", back_populates="clinical_records")
+
 class Vaccination(Base):
     __tablename__ = "vaccinations"
     id = Column(Integer, primary_key=True, index=True)
@@ -82,23 +114,28 @@ class Vaccination(Base):
     date_administered = Column(DateTime(timezone=True), server_default=func.now())
     next_dose_date = Column(DateTime(timezone=True), nullable=True, index=True)
     
-    # Premium features - Signature & Verification
     is_signed = Column(Boolean, default=False)
     signed_at = Column(DateTime(timezone=True), nullable=True)
     batch_number = Column(String, nullable=True)
-    signature_hash = Column(String, nullable=True) # Integrity hash
-    signature_data = Column(Text, nullable=True) # Base64 signature image
-    vet_stamp = Column(Text, nullable=True) # Base64 stamp image
+    signature_hash = Column(String, nullable=True)
+    signature_data = Column(Text, nullable=True)
+    vet_stamp = Column(Text, nullable=True)
 
-class PremiumCertificate(Base):
+    organization = relationship("Organization", back_populates="vaccinations")
+    patient = relationship("Patient", back_populates="vaccinations")
+
+class DigitalCertificate(Base):
     __tablename__ = "premium_certificates"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
     file_hash = Column(String, unique=True, index=True)
-    storage_path = Column(String) # Path in Supabase Storage
+    storage_path = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_valid = Column(Boolean, default=True)
+
+    organization = relationship("Organization", back_populates="digital_certificates")
+    patient = relationship("Patient", back_populates="digital_certificates")
 
 class Appointment(Base):
     __tablename__ = "appointments"
@@ -111,11 +148,13 @@ class Appointment(Base):
     status = Column(String, default="confirmed", index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Composite index for dashboard filtering
     __table_args__ = (
         Index('idx_apps_org_status', 'org_id', 'status'),
         Index('idx_apps_org_date', 'org_id', 'date'),
     )
+
+    organization = relationship("Organization", back_populates="appointments")
+    patient = relationship("Patient", back_populates="appointments")
 
 class MedicalAttention(Base):
     __tablename__ = "medical_attentions"
@@ -123,11 +162,16 @@ class MedicalAttention(Base):
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
     vet_id = Column(Integer, ForeignKey("users.id"), index=True)
-    status = Column(String, default="in_progress") # suspended, in_progress, finished
+    status = Column(String, default="in_progress")
     start_date = Column(DateTime(timezone=True), server_default=func.now())
     end_date = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    organization = relationship("Organization", back_populates="medical_attentions")
+    patient = relationship("Patient", back_populates="attentions")
+    vet = relationship("User", back_populates="attentions")
+    ticket = relationship("Ticket", back_populates="attention", uselist=False)
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -138,9 +182,13 @@ class Ticket(Base):
     date = Column(DateTime(timezone=True), server_default=func.now())
     total_amount = Column(Float, default=0.0)
     currency = Column(String, default="ARS")
-    payment_status = Column(String, default="pending") # pending, paid
+    payment_status = Column(String, default="pending")
     payment_method = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    organization = relationship("Organization", back_populates="tickets")
+    attention = relationship("MedicalAttention", back_populates="ticket")
+    items = relationship("TicketItem", back_populates="ticket")
 
 class TicketItem(Base):
     __tablename__ = "ticket_items"
@@ -150,3 +198,5 @@ class TicketItem(Base):
     unit_price = Column(Float)
     quantity = Column(Integer, default=1)
     subtotal = Column(Float)
+
+    ticket = relationship("Ticket", back_populates="items")

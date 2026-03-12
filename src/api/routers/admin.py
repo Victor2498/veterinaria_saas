@@ -138,8 +138,8 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         if not row: raise HTTPException(status_code=404)
         user, org = row
         
-        if org.plan_type not in ["pro", "premium"] and not user.is_superadmin:
-            raise HTTPException(status_code=403, detail="Esta función requiere el plan PRO o superior")
+        if org.plan_type not in ["pro"] and not user.is_superadmin:
+            raise HTTPException(status_code=403, detail="Esta función requiere el plan PRO")
 
         pat_res = await session.execute(select(Patient).where(Patient.id == patient_id, Patient.org_id == org.id))
         patient = pat_res.scalar()
@@ -319,7 +319,7 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
     vaccine_name = data.get("vaccine_name")
     next_dose_date = data.get("next_dose_date")
     
-    # Premium Fields
+    # Digital Docs Fields
     batch_number = data.get("batch_number")
     is_signed = data.get("is_signed", False)
     
@@ -333,10 +333,10 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
         )
         if not pat_res.scalar(): raise HTTPException(status_code=403)
         
-        # Validate Premium Signature
+        # Validate Signature flag
         if is_signed:
-            if org.plan_type != "premium" and not user.is_superadmin:
-                raise HTTPException(status_code=403, detail="La firma digital es exclusiva del Plan Premium")
+            if org.plan_type != "pro" and not user.is_superadmin:
+                raise HTTPException(status_code=403, detail="La firma digital requiere plan PRO")
             
             # Here we would normally validate Digital Signature/Stamp
             # For now, we trust the flag + auth

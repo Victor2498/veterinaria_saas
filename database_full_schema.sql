@@ -13,11 +13,11 @@ CREATE TABLE organizations (
 	PRIMARY KEY (id)
 );
 
+CREATE INDEX ix_organizations_name ON organizations (name);
+
+CREATE INDEX ix_organizations_slug ON organizations (slug);
+
 CREATE INDEX ix_organizations_id ON organizations (id);
-
-CREATE UNIQUE INDEX ix_organizations_name ON organizations (name);
-
-CREATE UNIQUE INDEX ix_organizations_slug ON organizations (slug);
 
 CREATE TABLE users (
 	id SERIAL NOT NULL, 
@@ -30,9 +30,9 @@ CREATE TABLE users (
 	FOREIGN KEY(org_id) REFERENCES organizations (id)
 );
 
-CREATE INDEX ix_users_id ON users (id);
+CREATE INDEX ix_users_username ON users (username);
 
-CREATE UNIQUE INDEX ix_users_username ON users (username);
+CREATE INDEX ix_users_id ON users (id);
 
 CREATE TABLE services (
 	id SERIAL NOT NULL, 
@@ -45,11 +45,11 @@ CREATE TABLE services (
 	FOREIGN KEY(org_id) REFERENCES organizations (id)
 );
 
+CREATE INDEX ix_services_org_id ON services (org_id);
+
 CREATE INDEX ix_services_id ON services (id);
 
 CREATE INDEX ix_services_category ON services (category);
-
-CREATE INDEX ix_services_org_id ON services (org_id);
 
 CREATE INDEX ix_services_name ON services (name);
 
@@ -90,43 +90,13 @@ CREATE TABLE patients (
 	FOREIGN KEY(owner_id) REFERENCES owners (id)
 );
 
-CREATE INDEX ix_patients_org_id ON patients (org_id);
-
 CREATE INDEX ix_patients_name ON patients (name);
-
-CREATE INDEX ix_patients_id ON patients (id);
 
 CREATE INDEX ix_patients_owner_id ON patients (owner_id);
 
-CREATE TABLE appointments (
-	id SERIAL NOT NULL, 
-	org_id INTEGER, 
-	pet_name VARCHAR, 
-	reason VARCHAR, 
-	owner_id INTEGER, 
-	date TIMESTAMP WITH TIME ZONE, 
-	status VARCHAR, 
-	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(), 
-	PRIMARY KEY (id), 
-	FOREIGN KEY(org_id) REFERENCES organizations (id), 
-	FOREIGN KEY(owner_id) REFERENCES owners (id)
-);
+CREATE INDEX ix_patients_org_id ON patients (org_id);
 
-CREATE INDEX ix_appointments_pet_name ON appointments (pet_name);
-
-CREATE INDEX ix_appointments_status ON appointments (status);
-
-CREATE INDEX idx_apps_org_status ON appointments (org_id, status);
-
-CREATE INDEX ix_appointments_org_id ON appointments (org_id);
-
-CREATE INDEX ix_appointments_date ON appointments (date);
-
-CREATE INDEX idx_apps_org_date ON appointments (org_id, date);
-
-CREATE INDEX ix_appointments_owner_id ON appointments (owner_id);
-
-CREATE INDEX ix_appointments_id ON appointments (id);
+CREATE INDEX ix_patients_id ON patients (id);
 
 CREATE TABLE clinical_records (
 	id SERIAL NOT NULL, 
@@ -143,9 +113,9 @@ CREATE TABLE clinical_records (
 
 CREATE INDEX ix_clinical_records_org_id ON clinical_records (org_id);
 
-CREATE INDEX ix_clinical_records_id ON clinical_records (id);
-
 CREATE INDEX ix_clinical_records_patient_id ON clinical_records (patient_id);
+
+CREATE INDEX ix_clinical_records_id ON clinical_records (id);
 
 CREATE TABLE vaccinations (
 	id SERIAL NOT NULL, 
@@ -188,13 +158,43 @@ CREATE TABLE premium_certificates (
 	FOREIGN KEY(patient_id) REFERENCES patients (id)
 );
 
-CREATE INDEX ix_premium_certificates_patient_id ON premium_certificates (patient_id);
+CREATE INDEX ix_premium_certificates_file_hash ON premium_certificates (file_hash);
 
-CREATE UNIQUE INDEX ix_premium_certificates_file_hash ON premium_certificates (file_hash);
+CREATE INDEX ix_premium_certificates_patient_id ON premium_certificates (patient_id);
 
 CREATE INDEX ix_premium_certificates_id ON premium_certificates (id);
 
 CREATE INDEX ix_premium_certificates_org_id ON premium_certificates (org_id);
+
+CREATE TABLE appointments (
+	id SERIAL NOT NULL, 
+	org_id INTEGER, 
+	pet_name VARCHAR, 
+	reason VARCHAR, 
+	owner_id INTEGER, 
+	date TIMESTAMP WITH TIME ZONE, 
+	status VARCHAR, 
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(org_id) REFERENCES organizations (id), 
+	FOREIGN KEY(owner_id) REFERENCES owners (id)
+);
+
+CREATE INDEX idx_apps_org_date ON appointments (org_id, date);
+
+CREATE INDEX ix_appointments_id ON appointments (id);
+
+CREATE INDEX ix_appointments_pet_name ON appointments (pet_name);
+
+CREATE INDEX ix_appointments_status ON appointments (status);
+
+CREATE INDEX idx_apps_org_status ON appointments (org_id, status);
+
+CREATE INDEX ix_appointments_org_id ON appointments (org_id);
+
+CREATE INDEX ix_appointments_date ON appointments (date);
+
+CREATE INDEX ix_appointments_owner_id ON appointments (owner_id);
 
 CREATE TABLE medical_attentions (
 	id SERIAL NOT NULL, 
@@ -212,9 +212,9 @@ CREATE TABLE medical_attentions (
 	FOREIGN KEY(vet_id) REFERENCES users (id)
 );
 
-CREATE INDEX ix_medical_attentions_org_id ON medical_attentions (org_id);
-
 CREATE INDEX ix_medical_attentions_vet_id ON medical_attentions (vet_id);
+
+CREATE INDEX ix_medical_attentions_org_id ON medical_attentions (org_id);
 
 CREATE INDEX ix_medical_attentions_patient_id ON medical_attentions (patient_id);
 

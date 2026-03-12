@@ -72,12 +72,10 @@ async def ui_access_required(username: str = Depends(admin_required)):
 def check_plan_feature(current_plan: str, required_feature: str) -> bool:
     """Centralized logic to check if a plan has access to a feature."""
     
-    # Normalizamos planes Pro y Premium como iguales
     plan_rank = {
         "lite": 0,
         "basic": 1,
-        "pro": 2,
-        "premium": 3 # Premium superior a Pro
+        "pro": 2
     }
     
     # Definición de requerimientos mínimos
