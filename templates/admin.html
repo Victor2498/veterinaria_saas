@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - {{ org.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --success: #10b981;
+            --border: rgba(255, 255, 255, 0.05);
+            --sidebar-hover: rgba(99, 102, 241, 0.1);
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-dim: #64748b;
+            --border: rgba(0, 0, 0, 0.05);
+            --sidebar-hover: rgba(99, 102, 241, 0.05);
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--card-shadow);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 1rem;
+            border-radius: 12px;
+            color: var(--text-dim);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+
+        .nav-item.active,
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+            color: var(--primary);
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            margin-top: 1rem;
+            background: var(--sidebar-hover);
+            padding: 0.75rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-dim);
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-light);
+            color: var(--text-main);
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .tag {
+            padding: 0.4rem 1rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-pro {
+            background: linear-gradient(135deg, var(--secondary), #f43f5e);
+            color: white;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+        }
+
+        .tag-basic {
+            background: var(--sidebar-hover);
+            color: var(--primary);
+            border: 1px solid var(--primary-light);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* Table Section */
+        .section-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white !important;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: 0.3s;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.02);
+        }
+
+        /* Tabs styling */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--sidebar-hover);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Detail List Styling */
+        .detail-item {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-waiting {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border-color: #f59e0b;
+        }
+
+        .status-attended {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: #10b981;
+        }
+
+        .status-cancelled {
+            background: rgba(244, 63, 94, 0.1);
+            color: #f43f5e;
+            border-color: #f43f5e;
+        }
+
+        .status-confirmed {
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+            border-color: #6366f1;
+        }
+
+        .status-select {
+            background: var(--bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Modal Base */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 2.5rem;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo">🐾 DogBot Admin</div>
+        <a href="#" class="nav-item active" onclick="showSection('dashboard', this)">📊 Dashboard</a>
+        <a href="#" class="nav-item" onclick="showSection('citas', this)">🗓️ Citas</a>
+        <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
+        <a href="#" class="nav-item" onclick="showSection('servicios', this)">🏷️ Servicios</a>
+        <a href="#" class="nav-item" onclick="showSection('atenciones', this)">🩺 Atenciones</a>
+        <a href="#" class="nav-item" onclick="showSection('caja', this)">💰 Caja</a>
+
+        <div style="margin-top: auto;">
+            <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
+            <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Configuración</a>
+            <div class="theme-toggle" onclick="toggleTheme()">
+                <span id="theme-text">Modo Claro</span>
+                <span id="theme-icon">🌞</span>
+            </div>
+            <a href="/logout" class="nav-item" style="color: #f43f5e;">🚪 Cerrar Sesión</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Header Dynamic? No, header is global -->
+        <div class="header">
+            <div>
+                <h1 style="font-size: 1.8rem;">Bienvenido, {{ username }}</h1>
+                <p style="color: var(--text-dim)">Gestionando Clínica: <strong>{{ org.name }}</strong></p>
+            </div>
+            <div class="tag {% if org.plan_type == 'pro' %}tag-pro{% else %}tag-basic{% endif %}">
+                Plan {{ org.plan_type }}
+            </div>
+        </div>
+
+        <!-- SECTION: DASHBOARD -->
+        <div id="section-dashboard" class="content-section" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Citas Totales</div>
+                    <div class="stat-value">{{ total_appointments }}</div>
+                    <div style="color: var(--success); font-size: 0.8rem;">↑ 12% este mes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pacientes Activos</div>
+                    <div class="stat-value">{{ patients_count }}</div>
+                    <div style="color: var(--primary-light); font-size: 0.8rem;">Base de datos completa</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">WhatsApp Status</div>
+                    <div class="stat-value" style="color: var(--success); font-size: 1.2rem;">🟢 Conectado</div>
+                    <div style="color: var(--text-dim); font-size: 0.8rem;">Instancia: {{ org.evolution_instance }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Citas Recientes (WhatsApp)</h2>
+                    <a href="#" class="btn" onclick="showSection('citas')">Ver todas</a>
+                </div>
+                {% if recent_appointments %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_appointments %}
+                        <tr>
+                            <td><strong style="cursor: pointer; color: var(--primary);"
+                                    data-pid="{{ row.Patient.id if row.Patient else '' }}"
+                                    data-pname="{{ row.Appointment.pet_name }}"
+                                    onclick="navigateToPatientFromData(this)">
+                                    {{ row.Appointment.pet_name }}</strong></td>
+                            <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
+                            <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <select class="status-select status-{{ row.Appointment.status }}"
+                                    onchange="updateAppointmentStatus('{{ row.Appointment.id }}', this.value)">
+                                    <option value="confirmed" {% if row.Appointment.status=='confirmed' %}selected{%
+                                        endif %}>Confirmado</option>
+                                    <option value="waiting" {% if row.Appointment.status=='waiting' %}selected{% endif
+                                        %}>En espera</option>
+                                    <option value="attended" {% if row.Appointment.status=='attended' %}selected{% endif
+                                        %}>Atendido</option>
+                                    <option value="cancelled" {% if row.Appointment.status=='cancelled' %}selected{%
+                                        endif %}>Suspendido</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="text-align: center; color: var(--text-dim); padding: 2rem;">No hay citas registradas aún.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- SECTION: CITAS -->
+        <div id="section-citas" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Calendario de Citas</h2>
+                    <button class="btn" style="background: var(--success);">+ Nueva Cita</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Motivo</th>
+                            <th>Fecha y Hora</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in all_appointments %}
+                        <tr>
+                            <td><strong style="cursor: pointer; color: var(--primary);"
+                                    data-pid="{{ row.Patient.id if row.Patient else '' }}"
+                                    data-pname="{{ row.Appointment.pet_name }}"
+                                    onclick="navigateToPatientFromData(this)">
+                                    {{ row.Appointment.pet_name }}</strong></td>
+                            <td>{{ row.Owner.name or row.Owner.phone_number }}</td>
+                            <td>{{ row.Appointment.reason or 'Consulta General' }}</td>
+                            <td>{{ row.Appointment.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <select class="status-select status-{{ row.Appointment.status }}"
+                                    onchange="updateAppointmentStatus('{{ row.Appointment.id }}', this.value)">
+                                    <option value="confirmed" {% if row.Appointment.status=='confirmed' %}selected{%
+                                        endif %}>Confirmado</option>
+                                    <option value="waiting" {% if row.Appointment.status=='waiting' %}selected{% endif
+                                        %}>En espera</option>
+                                    <option value="attended" {% if row.Appointment.status=='attended' %}selected{% endif
+                                        %}>Atendido</option>
+                                    <option value="cancelled" {% if row.Appointment.status=='cancelled' %}selected{%
+                                        endif %}>Suspendido</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECTION: PACIENTES -->
+        <div id="section-pacientes" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Gestión de Pacientes</h2>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" placeholder="Buscar paciente o dueño..."
+                            style="padding: 0.5rem 1rem; border-radius: 10px; width: 300px;">
+                        <a href="/admin/export_patients_csv" class="btn"
+                            style="text-decoration: none; background: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                            📦 Exportar Backup (CSV)
+                        </a>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Dueño</th>
+                            <th>Raza / Especie</th>
+                            <th>Edad / Peso</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in patients %}
+                        <tr>
+                            <td>
+                                <strong style="cursor: pointer; color: var(--primary);"
+                                    onclick="openEditPatientModal('{{ row.Patient.id }}')">
+                                    {{ row.Patient.name }}</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Patient.sex or 'No
+                                    especificado' }}</span>
+                            </td>
+                            <td>{{ row.Owner.name or 'S/N' }}<br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">{{ row.Owner.phone_number
+                                    }}</span>
+                            </td>
+                            <td>{{ row.Patient.breed or row.Patient.species }}</td>
+                            <td>
+                                <span class="patient-age" data-birth="{{ row.Patient.birth_date }}"></span><br>
+                                <span style="font-size: 0.8rem; color: var(--text-dim);">
+                                    {{ row.Patient.weight or '--' }} kg / {{ row.Patient.height or '--' }} cm
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+
+
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
+                                        onclick="openEditPatientModal('{{ row.Patient.id }}')">
+                                        👁️ Ver Detalle</button>
+
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid #f43f5e; color: #f43f5e !important;"
+                                        onclick="deletePatient('{{ row.Patient.id }}', '{{ row.Patient.name }}')">
+                                        🗑️ Eliminar</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- SECTION: SERVICIOS -->
+        <div id="section-servicios" class="content-section" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Gestión de Servicios y Precios</h2>
+                    <button class="btn" onclick="openAddServiceModal()">+ Nuevo Servicio</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-table-body">
+                        {% for s in services %}
+                        <tr>
+                            <td><strong>{{ s.name }}</strong></td>
+                            <td><span class="badge" style="background: var(--bg); border: 1px solid var(--border);">{{
+                                    s.category }}</span></td>
+                            <td><strong style="color: var(--success);">${{ "%.2f"|format(s.price) }}</strong></td>
+                            <td style="font-size: 0.85rem; color: var(--text-dim);">{{ s.description or '-' }}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid var(--primary-light); color: var(--primary-light) !important;"
+                                        data-id="{{ s.id }}" data-name="{{ s.name }}" data-price="{{ s.price }}"
+                                        data-cat="{{ s.category }}" data-desc="{{ s.description or '' }}"
+                                        onclick="openEditServiceModalFromData(this)">
+                                        ✏️ Editar</button>
+                                    <button class="btn"
+                                        style="padding: 0.4rem 0.8rem; background: var(--card); border: 1px solid #f43f5e; color: #f43f5e !important;"
+                                        onclick="deleteService('{{ s.id }}', '{{ s.name }}')">
+                                        🗑️ Borrar</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2>🔑 Cambiar Contraseña</h2>
+            <div class="form-group">
+                <label>Contraseña Actual</label>
+                <input type="password" id="oldPass" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>Nueva Contraseña</label>
+                <input type="password" id="newPass" placeholder="••••••••">
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn" style="flex: 1;" onclick="submitPasswordChange()">Guardar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="closePasswordModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Patient Modal (Tabs) -->
+    <div id="patientEditModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 id="modalTitle">Detalle del Paciente</h2>
+                <button onclick="closeEditPatientModal()"
+                    style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:1.5rem;">&times;</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('tab-general', this)">📋 Datos</button>
+                <button class="tab-btn" onclick="switchTab('tab-historia', this)">📜 Historia</button>
+                <button class="tab-btn" onclick="switchTab('tab-vacunas', this)">💉 Vacunas</button>
+            </div>
+
+            <!-- Tab: General -->
+            <div id="tab-general" class="tab-content active">
+                <input type="hidden" id="editPatId">
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Nombre</label>
+                        <input type="text" id="editPatName">
+                    </div>
+                    <div class="form-group">
+                        <label>Especie</label>
+                        <input type="text" id="editPatSpecies">
+                    </div>
+                    <div class="form-group">
+                        <label>Raza</label>
+                        <input type="text" id="editPatBreed">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" id="editPatBirth">
+                    </div>
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select id="editPatSex"
+                            style="width: 100%; padding: 0.75rem; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text-main); outline: none;">
+                            <option value="Macho">Macho</option>
+                            <option value="Hembra">Hembra</option>
+                            <option value="No especificado">No especificado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Peso (kg)</label>
+                        <input type="number" step="0.1" id="editPatWeight">
+                    </div>
+                    <div class="form-group">
+                        <label>Altura (cm)</label>
+                        <input type="number" step="0.1" id="editPatHeight">
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn" style="width: 100%;" onclick="savePatientEdit()">Guardar Cambios
+                        Principales</button>
+                </div>
+            </div>
+
+            <!-- Tab: Historia Clínica -->
+            <div id="tab-historia" class="tab-content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+                    <h3>Evolución Médica</h3>
+                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--success);"
+                        onclick="showNewRecordForm()">+ Nueva</button>
+                </div>
+
+                <div id="new-record-form"
+                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary);">
+                    <textarea id="new-record-desc" placeholder="Describe la evolución, diagnóstico o tratamiento..."
+                        style="width:100%; height:80px; background:var(--bg); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:0.5rem; outline:none; margin-bottom:0.5rem;"></textarea>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewRecord()">Guardar
+                            Registro</button>
+                        <button class="btn"
+                            style="flex:1; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
+                            onclick="hideNewRecordForm()">Cancelar</button>
+                    </div>
+                </div>
+
+                <div id="history-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Se llena con JS -->
+                </div>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    {% if org.plan_type == 'pro' or org.plan_type == 'premium' %}
+                    <button class="btn" style="width: 100%; background: var(--card); border: 1px solid var(--primary);"
+                        id="btnExportHistory">📜 Descargar Historia Clínica (PDF)</button>
+                    {% else %}
+                    <button class="btn"
+                        style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
+                        onclick="alert('Mejora a PRO para descargar PDFs')">🔒 PDF bloqueado (Plan {{
+                        org.plan_type.upper() }})</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab: Vacunas -->
+            <div id="tab-vacunas" class="tab-content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+                    <h3>Plan Sanitario</h3>
+                    <button class="btn" style="padding: 0.4rem 0.8rem; background: var(--success);"
+                        onclick="showNewVaccineForm()">+ Nueva Dosis</button>
+                </div>
+
+                <div id="new-vaccine-form"
+                    style="display:none; background: var(--sidebar-hover); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--primary);">
+                    <div class="form-group">
+                        <label>Vacuna / Tratamiento</label>
+                        <input type="text" id="new-vac-name" placeholder="Ej: Quintuple, Rabia, Desparasitación...">
+                    </div>
+                    <div class="form-group">
+                        <label>Próxima Dosis (Opcional)</label>
+                        <input type="date" id="new-vac-next">
+                    </div>
+
+                    {% if org.plan_type == 'premium' or user.is_superadmin %}
+                    <div class="form-group"
+                        style="background: rgba(212, 175, 55, 0.1); padding: 0.5rem; border-radius: 8px; border: 1px solid #D4AF37;">
+                        <label
+                            style="color: #D4AF37; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="new-vac-signed">
+                            <span>🖋️ Firmar Digitalmente (Premium)</span>
+                        </label>
+                        <input type="text" id="new-vac-batch" placeholder="Lote / Serie (Requerido si firma)"
+                            style="display: none; margin-top: 0.5rem; font-size: 0.9rem;">
+                    </div>
+                    {% endif %}
+
+                    <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+                        <button class="btn" style="flex:1; font-size:0.8rem;" onclick="submitNewVaccine()">Guardar
+                            Registro</button>
+                        <button class="btn"
+                            style="flex:1; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
+                            onclick="hideNewVaccineForm()">Cancelar</button>
+                    </div>
+                </div>
+
+                <div id="vaccine-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Se llena con JS -->
+                </div>
+
+                <div
+                    style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+
+                    <!-- Botón Básico (Siempre visible para planes pagos) -->
+                    {% if org.plan_type != 'lite' %}
+                    <button class="btn" style="width: 100%; background: var(--card); border: 1px solid var(--primary);"
+                        onclick="window.location.href='/admin/export_vaccines/'+document.getElementById('editPatId').value">
+                        📒 Descargar Libreta (Simple)
+                    </button>
+                    {% endif %}
+
+                    <!-- Botón Premium -->
+                    {% if org.plan_type == 'premium' or user.is_superadmin %}
+                    <button class="btn"
+                        style="width: 100%; background: linear-gradient(135deg, #D4AF37, #F9D5B1); color: #1e293b !important; font-weight: 700; border: none;"
+                        onclick="generatePremiumCert()">
+                        🏅 Generar Certificado Premium
+                    </button>
+                    {% else %}
+                    <button class="btn"
+                        style="width: 100%; background: var(--card); border: 1px solid var(--text-dim); opacity: 0.6; cursor: not-allowed;"
+                        onclick="alert('Mejora a PREMIUM para certificados verificables')">
+                        🔒 Certificado Premium (Bloqueado)
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function showSection(sectionId, element) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            // Show target section
+            document.getElementById('section-' + sectionId).style.display = 'block';
+
+            // Update active state in sidebar
+            if (element) {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                element.classList.add('active');
+            }
+
+            // Persistence
+            window.location.hash = sectionId;
+        }
+
+        // Helper to calculate age
+        function calculateAge(birthDate) {
+            if (!birthDate || birthDate === 'None') return 'N/A';
+            const birth = new Date(birthDate);
+            const now = new Date();
+            let years = now.getFullYear() - birth.getFullYear();
+            let months = now.getMonth() - birth.getMonth();
+            if (months < 0 || (months === 0 && now.getDate() < birth.getDate())) {
+                years--;
+                months += 12;
+            }
+            if (years > 0) return years + (years === 1 ? ' año' : ' años');
+            return months + (months === 1 ? ' mes' : ' meses');
+        }
+
+        function updateAges() {
+            document.querySelectorAll('.patient-age').forEach(span => {
+                const birth = span.getAttribute('data-birth');
+                span.innerText = calculateAge(birth);
+            });
+        }
+
+        function openPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        async function submitPasswordChange() {
+            const old_password = document.getElementById('oldPass').value;
+            const new_password = document.getElementById('newPass').value;
+            if (!old_password || !new_password) return alert('Ingresa ambas contraseñas');
+
+            const res = await fetch('/admin/change_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ old_password, new_password })
+            });
+
+            if (res.ok) {
+                alert('¡Contraseña actualizada con éxito!');
+                closePasswordModal();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + (err.detail || 'No se pudo actualizar la contraseña.'));
+            }
+        }
+
+        // --- Patient Detail & Tabs Logic ---
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        async function openEditPatientModal(id) {
+            // Load base data from API
+            const res = await fetch(`/admin/patient_data/${id}`);
+            if (!res.ok) return alert("Error al cargar datos del paciente");
+
+            const data = await res.json();
+            const p = data.patient;
+
+            document.getElementById('editPatId').value = p.id;
+            document.getElementById('modalTitle').innerText = `Detalle: ${p.name}`;
+            document.getElementById('editPatName').value = p.name;
+            document.getElementById('editPatSpecies').value = p.species;
+            document.getElementById('editPatBreed').value = p.breed || '';
+            document.getElementById('editPatBirth').value = p.birth_date || '';
+            document.getElementById('editPatWeight').value = p.weight || '';
+            document.getElementById('editPatHeight').value = p.height || '';
+            document.getElementById('editPatSex').value = p.sex || 'No especificado';
+
+            // Populate Clinical History
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = data.records.length ? '' : '<p style="color:var(--text-dim); padding:1rem;">No hay registros aún.</p>';
+            data.records.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                item.innerHTML = `
+                    <div class="detail-header">
+                        <span>📅 ${r.date}</span>
+                        <span>👨‍⚕️ ${r.vet_name}</span>
+                    </div>
+                    <div style="font-size:0.95rem; margin-bottom:0.5rem;">${r.description}</div>
+                    <div style="text-align:right;">
+                        <button class="btn" style="font-size:0.7rem; padding:0.2rem 0.5rem; background:transparent; border:1px solid var(--border); color:var(--text-dim) !important;" 
+                            onclick="editClinicalRecord(${r.id}, '${r.description.replace(/'/g, "\\'")}')">✏️ Editar</button>
+                    </div>
+                `;
+                historyList.appendChild(item);
+            });
+
+            // Populate Vaccinations
+            const vaccineList = document.getElementById('vaccine-list');
+            vaccineList.innerHTML = data.vaccinations.length ? '' : '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Sin vacunas registradas</td></tr>';
+            data.vaccinations.forEach(v => {
+                const row = document.createElement('tr');
+                let nameHtml = `<strong>${v.vaccine_name}</strong>`;
+                if (v.is_signed) {
+                    nameHtml += ` <span title="Firmado Digitalmente" style="cursor:help;">🏅</span>`;
+                }
+                if (v.batch_number) {
+                    nameHtml += `<br><span style="font-size:0.75rem; color: #b45309;">Lote: ${v.batch_number}</span>`;
+                }
+
+                row.innerHTML = `
+                    <td>${nameHtml}</td>
+                    <td>${v.date}</td>
+                    <td><span class="badge" style="background:var(--sidebar-hover); color:var(--primary);">${v.next_dose}</span></td>
+                    <td style="text-align:right;">
+                        <button onclick="editVaccination(${v.id}, '${v.vaccine_name}', '${v.next_dose}')" style="background:none; border:none; cursor:pointer;">✏️</button>
+                    </td>
+                `;
+                vaccineList.appendChild(row);
+            });
+
+            // Set PDF links with cache buster
+            const btnHistory = document.getElementById('btnExportHistory');
+            if (btnHistory) btnHistory.onclick = () => window.open(`/admin/export_history/${p.id}?t=${new Date().getTime()}`, '_blank');
+
+            const btnVac = document.getElementById('btnExportVac');
+            if (btnVac) btnVac.onclick = () => window.open(`/admin/export_vaccines/${p.id}?t=${new Date().getTime()}`, '_blank');
+
+            // Reset tabs
+            switchTab('tab-general', document.querySelector('.tab-btn'));
+            document.getElementById('patientEditModal').style.display = 'flex';
+        }
+
+        function showNewRecordForm() { document.getElementById('new-record-form').style.display = 'block'; }
+        function hideNewRecordForm() { document.getElementById('new-record-form').style.display = 'none'; }
+
+        async function submitNewRecord() {
+            const description = document.getElementById('new-record-desc').value;
+            const patient_id = document.getElementById('editPatId').value;
+            if (!description) return alert("Escribe un detalle clínico");
+
+            const res = await fetch('/admin/add_clinical_record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, description })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-record-desc').value = '';
+                hideNewRecordForm();
+                openEditPatientModal(patient_id); // Refresh
+            }
+        }
+
+        function showNewVacForm() { document.getElementById('new-vac-form').style.display = 'block'; }
+        function hideNewVacForm() { document.getElementById('new-vac-form').style.display = 'none'; }
+
+        async function submitNewVac() {
+            const vaccine_name = document.getElementById('new-vac-name').value;
+            const next_dose_date = document.getElementById('new-vac-next').value;
+            const patient_id = document.getElementById('editPatId').value;
+            if (!vaccine_name) return alert("Indica el nombre de la vacuna");
+
+            const res = await fetch('/admin/add_vaccination', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, vaccine_name, next_dose_date })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-vac-name').value = '';
+                document.getElementById('new-vac-next').value = '';
+                hideNewVacForm();
+                openEditPatientModal(patient_id); // Refresh
+            }
+        }
+
+        async function editClinicalRecord(id, oldDesc) {
+            const newDesc = prompt("Editar evolución clínica:", oldDesc);
+            if (newDesc === null || newDesc === oldDesc) return;
+
+            const res = await fetch(`/admin/update_clinical_record/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: newDesc })
+            });
+            if (res.ok) openEditPatientModal(document.getElementById('editPatId').value);
+        }
+
+        async function editVaccination(id, oldName, oldNext) {
+            const newName = prompt("Nombre de la vacuna:", oldName);
+            if (newName === null) return;
+            const nextStr = oldNext !== 'N/A' ? oldNext.split('/').reverse().join('-') : '';
+            const newNext = prompt("Próxima dosis (AAAA-MM-DD):", nextStr);
+            if (newNext === null) return;
+
+            const res = await fetch(`/admin/update_vaccination/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vaccine_name: newName, next_dose_date: newNext })
+            });
+            if (res.ok) openEditPatientModal(document.getElementById('editPatId').value);
+        }
+
+        function closeEditPatientModal() {
+            document.getElementById('patientEditModal').style.display = 'none';
+        }
+
+        async function savePatientEdit() {
+            const id = document.getElementById('editPatId').value;
+            const data = {
+                name: document.getElementById('editPatName').value,
+                species: document.getElementById('editPatSpecies').value,
+                breed: document.getElementById('editPatBreed').value,
+                birth_date: document.getElementById('editPatBirth').value,
+                weight: document.getElementById('editPatWeight').value,
+                height: document.getElementById('editPatHeight').value,
+                sex: document.getElementById('editPatSex').value
+            };
+
+            const res = await fetch(`/admin/update_patient/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('¡Paciente actualizado!');
+                window.location.href = window.location.href; // Preserva el hash
+            } else {
+                alert('Error al guardar cambios.');
+            }
+        }
+
+        function navigateToPatientFromData(el) {
+            navigateToPatient(el.getAttribute('data-pid'), el.getAttribute('data-pname'));
+        }
+
+        function navigateToPatient(id, name) {
+            showSection('pacientes', document.querySelector('a[onclick*="pacientes"]'));
+            if (id) {
+                // Si tenemos el ID, abrimos el modal directamente
+                // Necesitaríamos buscar los datos o pasarlos. Para simplificar, 
+                // si viene de otra sección donde no tenemos todo, podemos buscar la fila o simplemente filtrar.
+                const searchInput = document.querySelector('#section-pacientes input[type="text"]');
+                if (searchInput) {
+                    searchInput.value = name;
+                    // Opcional: disparar evento de búsqueda si lo implementas
+                }
+            }
+        }
+
+        async function updateAppointmentStatus(id, newStatus) {
+            const res = await fetch(`/admin/update_appointment_status/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                // Success - the class will be updated on reload, 
+                // but we can update it immediately for better UX
+                window.location.href = window.location.href; // Preserva el hash
+            } else {
+                alert('Error al actualizar el estado de la cita');
+            }
+        }
+
+        async function deletePatient(id, name) {
+            if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${name}"? Se borrarán también todos sus registros médicos y vacunas.`)) {
+                return;
+            }
+
+            const res = await fetch(`/admin/delete_patient/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert('Paciente eliminado correctamente');
+                window.location.href = window.location.href; // Preserva el hash
+            } else {
+                const err = await res.json();
+                alert('Error: ' + (err.detail || 'No se pudo eliminar al paciente.'));
+            }
+        }
+
+        function closeServiceModal() {
+            document.getElementById('serviceModal').style.display = 'none';
+        }
+
+        function openAddServiceModal() {
+            document.getElementById('serviceModalTitle').innerText = '🏷️ Nuevo Servicio';
+            document.getElementById('serviceId').value = '';
+            document.getElementById('serviceName').value = '';
+            document.getElementById('servicePrice').value = '';
+            document.getElementById('serviceCategory').value = 'Consultas';
+            document.getElementById('serviceDescription').value = '';
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function openEditServiceModal(id, name, price, category, desc) {
+            document.getElementById('serviceModalTitle').innerText = '✏️ Editar Servicio';
+            document.getElementById('serviceId').value = id;
+            document.getElementById('serviceName').value = name;
+            document.getElementById('servicePrice').value = price;
+            document.getElementById('serviceCategory').value = category;
+            document.getElementById('serviceDescription').value = desc;
+            document.getElementById('serviceModal').style.display = 'flex';
+        }
+
+        function openEditServiceModalFromData(btn) {
+            openEditServiceModal(
+                btn.getAttribute('data-id'),
+                btn.getAttribute('data-name'),
+                btn.getAttribute('data-price'),
+                btn.getAttribute('data-cat'),
+                btn.getAttribute('data-desc')
+            );
+        }
+
+        async function submitService() {
+            const id = document.getElementById('serviceId').value;
+            const data = {
+                name: document.getElementById('serviceName').value,
+                price: document.getElementById('servicePrice').value,
+                category: document.getElementById('serviceCategory').value,
+                description: document.getElementById('serviceDescription').value
+            };
+
+            const url = id ? `/admin/update_service/${id}` : '/admin/add_service';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                window.location.href = window.location.href; // Preserva el hash
+            } else {
+                alert('Error al guardar el servicio');
+            }
+        }
+
+        async function deleteService(id, name) {
+            if (!confirm(`¿Estás seguro de borrar el servicio "${name}"?`)) return;
+            const res = await fetch(`/admin/delete_service/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                window.location.href = window.location.href; // Preserva el hash
+            } else {
+                alert('Error al eliminar');
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const isLight = body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            updateThemeUI(isLight);
+        }
+
+        function updateThemeUI(isLight) {
+            const text = document.getElementById('theme-text');
+            const icon = document.getElementById('theme-icon');
+            if (isLight) {
+                text.innerText = 'Modo Oscuro';
+                icon.innerText = '🌙';
+            } else {
+                text.innerText = 'Modo Claro';
+                icon.innerText = '🌞';
+            }
+        }
+
+        // Initialize
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                updateThemeUI(true);
+            }
+            updateAges();
+
+            // Hash detection for section persistence
+            const currentHash = window.location.hash.substring(1);
+            let initialized = false;
+
+            if (currentHash) {
+                // Selector robusto que ignora diferencias en comillas
+                const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el =>
+                    el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${currentHash}'`)
+                );
+
+                if (navItem) {
+                    showSection(currentHash, navItem);
+                    initialized = true;
+                }
+            }
+
+            // Si no hay hash o falló la detección, mostrar dashboard por defecto
+            if (!initialized) {
+                showSection('dashboard', document.querySelector('.nav-item[onclick*="dashboard"]'));
+            }
+        })();
+        // --- Premium Vaccination Logic ---
+        document.getElementById('new-vac-signed')?.addEventListener('change', function (e) {
+            document.getElementById('new-vac-batch').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        function showNewVaccineForm() { document.getElementById('new-vaccine-form').style.display = 'block'; }
+        function hideNewVaccineForm() {
+            document.getElementById('new-vaccine-form').style.display = 'none';
+            document.getElementById('new-vac-name').value = '';
+            document.getElementById('new-vac-next').value = '';
+            if (document.getElementById('new-vac-signed')) {
+                document.getElementById('new-vac-signed').checked = false;
+                document.getElementById('new-vac-batch').style.display = 'none';
+                document.getElementById('new-vac-batch').value = '';
+            }
+        }
+
+        async function submitNewVaccine() {
+            const pid = document.getElementById('editPatId').value;
+            const name = document.getElementById('new-vac-name').value;
+            const next = document.getElementById('new-vac-next').value;
+
+            let isSigned = false;
+            let batch = null;
+
+            const signedInfo = document.getElementById('new-vac-signed');
+            if (signedInfo && signedInfo.checked) {
+                isSigned = true;
+                batch = document.getElementById('new-vac-batch').value;
+                if (!batch) {
+                    alert("El número de lote es obligatorio para firmas digitales.");
+                    return;
+                }
+            }
+
+            if (!name) return alert("Nombre requerido");
+
+            try {
+                const res = await fetch('/admin/add_vaccination', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: pid,
+                        vaccine_name: name,
+                        next_dose_date: next,
+                        is_signed: isSigned,
+                        batch_number: batch
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    hideNewVaccineForm();
+                    // Reload patient data to refresh the list
+                    openEditPatientModal(pid);
+                } else {
+                    alert(data.detail || "Error al guardar");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            }
+        }
+
+        async function generatePremiumCert() {
+            const pid = document.getElementById('editPatId').value;
+            if (!confirm("¿Generar Certificado Premium Oficial? Esto creará un registro inmutable.")) return;
+
+            try {
+                const btn = event.target || document.querySelector('button[onclick="generatePremiumCert()"]');
+                const originalText = btn.innerText;
+                btn.innerText = "Generando...";
+                btn.disabled = true;
+
+                const res = await fetch(`/admin/certificates/generate_premium/${pid}`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    // Success! 
+                    if (confirm("✅ Certificado Generado Exitosamente.\n¿Desea ENVIARLO POR WHATSAPP al dueño ahora?")) {
+                        // Send via WhatsApp
+                        const waRes = await fetch(`/admin/certificates/send_whatsapp/${data.cert_hash}`, { method: 'POST' });
+                        const waData = await waRes.json();
+                        if (waData.status === 'success') {
+                            alert("📨 Enviado por WhatsApp correctamente.");
+                        } else {
+                            alert("⚠️ Error al enviar WhatsApp: " + (waData.detail || "Desconocido"));
+                        }
+                    }
+
+                    if (confirm("¿Desea VER el certificado PDF ahora?")) {
+                        window.open(data.verify_url, '_blank');
+                    }
+                } else {
+                    alert(data.detail || "Error generando certificado");
+                }
+
+                btn.innerText = originalText;
+                btn.disabled = false;
+
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            }
+        }
+    </script>
+    <!-- SECTION: ATENCIONES -->
+    <div id="section-atenciones" class="content-section" style="display: none;">
+        <div class="section-header">
+            <h2>Gestión de Atenciones</h2>
+            <button class="btn" onclick="openNewAttentionModal()">+ Nueva Atención</button>
+        </div>
+
+        <div class="kanban-board" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;">
+            <!-- Column: Suspendido -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <h3 style="border-bottom: 2px solid var(--secondary); padding-bottom: 0.5rem; margin-bottom: 1rem;">⏳ En
+                    Espera</h3>
+                <div id="kanban-suspended" class="kanban-list"
+                    style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+            <!-- Column: En Progreso -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--primary);">
+                <h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1rem;">👨‍⚕️
+                    En Consulta</h3>
+                <div id="kanban-in_progress" class="kanban-list"
+                    style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+            <!-- Column: Terminado -->
+            <div class="kanban-col"
+                style="flex: 1; min-width: 300px; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--success);">
+                <h3 style="border-bottom: 2px solid var(--success); padding-bottom: 0.5rem; margin-bottom: 1rem;">✅
+                    Finalizados (Hoy)</h3>
+                <div id="kanban-finished" class="kanban-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION: CAJA -->
+    <div id="section-caja" class="content-section" style="display: none;">
+        <div class="section-header">
+            <h2>Caja y Facturación</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn" onclick="loadFinanceMetrics('today')"
+                    style="background: var(--card); border: 1px solid var(--border);">Hoy</button>
+                <button class="btn" onclick="loadFinanceMetrics('month')"
+                    style="background: var(--card); border: 1px solid var(--border);">Mes</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Ingresos del Periodo</div>
+                <div class="stat-value" id="finance-total">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tickets Emitidos</div>
+                <div class="stat-value" id="finance-count">0</div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Últimos Tickets</h3>
+            <table id="tickets-table">
+                <thead>
+                    <tr>
+                        <th># Ticket</th>
+                        <th>Fecha</th>
+                        <th>Paciente</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- New Attention Modal -->
+    <div id="newAttentionModal" class="modal">
+        <div class="modal-content">
+            <h2>🏥 Nueva Atención</h2>
+            <div class="form-group">
+                <label>Paciente</label>
+                <select id="attPatientSelect" class="status-select" style="width: 100%; padding: 0.8rem;">
+                    <option value="">Seleccione un paciente...</option>
+                    {% for p in patients %}
+                    <option value="{{ p.Patient.id }}">{{ p.Patient.name }} ({{ p.Owner.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notas Iniciales (Motivo)</label>
+                <textarea id="attNotes" rows="3" placeholder="Motivo de la consulta..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1;" onclick="createAttention()">Iniciar Consulta</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="document.getElementById('newAttentionModal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finish Attention Modal (Ticket Generation) -->
+    <div id="finishAttentionModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2>🧾 Finalizar Consulta y Generar Ticket</h2>
+            <input type="hidden" id="finishAttId">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Left: Services Adder -->
+                <div>
+                    <h3>Agregar Servicios</h3>
+                    <div class="form-group">
+                        <label>Servicio / Producto</label>
+                        <select id="ticketServiceSelect" class="status-select" style="width: 100%;"
+                            onchange="updateTicketPrice()">
+                            <option value="">Seleccionar...</option>
+                            {% for s in services %}
+                            <option value="{{ s.id }}" data-price="{{ s.price }}" data-name="{{ s.name }}">{{ s.name }}
+                                - ${{ s.price }}</option>
+                            {% endfor %}
+                            <option value="custom" data-price="0">Otro (Manual)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="customServiceDiv" style="display:none;">
+                        <input type="text" id="customServiceName" placeholder="Descripción del servicio">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Precio</label>
+                            <input type="number" id="ticketItemPrice" placeholder="0.00">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Cantidad</label>
+                            <input type="number" id="ticketItemQty" value="1">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="addTicketItem()">Agregar al Ticket</button>
+                </div>
+
+                <!-- Right: Ticket Preview -->
+                <div style="background: var(--bg); padding: 1rem; border-radius: 8px;">
+                    <h3>Resumen del Ticket</h3>
+                    <table id="ticketPreviewTable" style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Cant</th>
+                                <th>Subtotal</th>
+                                <th>X</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div
+                        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.5rem; text-align: right; font-weight: bold; font-size: 1.2rem;">
+                        Total: $<span id="ticketTotal">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Notas Finales</label>
+                <textarea id="finishNotes" rows="2" placeholder="Indicaciones finales..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1; background: var(--success);"
+                    onclick="submitFinishAttention()">Finalizar y Cobrar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="document.getElementById('finishAttentionModal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Modal -->
+    <div id="serviceModal" class="modal">
+        <div class="modal-content">
+            <h2 id="serviceModalTitle">🏷️ Nuevo Servicio</h2>
+            <input type="hidden" id="serviceId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre del Servicio</label>
+                    <input type="text" id="serviceName" placeholder="Ej: Vacuna Sextuple">
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="serviceCategory" class="status-select" style="width: 100%; padding: 0.8rem;">
+                        <option value="Consultas">Consultas</option>
+                        <option value="Vacunas">Vacunas</option>
+                        <option value="Peluquería">Peluquería</option>
+                        <option value="Antiparasitarios">Antiparasitarios</option>
+                        <option value="Cirugías">Cirugías</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Precio ($)</label>
+                    <input type="number" id="servicePrice" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Descripción (Opcional)</label>
+                    <input type="text" id="serviceDescription" placeholder="Breve detalle del servicio">
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn" style="flex: 1;" onclick="submitService()">Guardar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
+                    onclick="closeServiceModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // --- ATENCIONES LOGIC ---
+        async function loadAttentions() {
+            try {
+                const res = await fetch('/attentions/active');
+                if (res.ok) {
+                    const data = await res.json();
+                    renderKanban(data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderKanban(data) {
+            const cols = {
+                'suspended': document.getElementById('kanban-suspended'),
+                'in_progress': document.getElementById('kanban-in_progress'),
+                'finished': document.getElementById('kanban-finished')
+            };
+            // Clear
+            Object.values(cols).forEach(c => c.innerHTML = '');
+
+            data.forEach(att => {
+                const card = document.createElement('div');
+                card.className = 'kanban-card';
+                card.style = 'background: var(--bg); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.8rem;';
+                card.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 0.5rem;">${att.patient_name}</div>
+            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Inicio: ${att.start_date}</div>
+            <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${att.notes || ''}</div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                ${getKanbanButtons(att)}
+            </div>
+        `;
+                if (cols[att.status]) cols[att.status].appendChild(card);
+            });
+        }
+
+        function getKanbanButtons(att) {
+            if (att.status === 'suspended') {
+                return `<button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="updateAttentionStatus(${att.id}, 'in_progress')">▶ Retomar</button>`;
+            } else if (att.status === 'in_progress') {
+                return `
+            <button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: var(--secondary);" onclick="updateAttentionStatus(${att.id}, 'suspended')">⏸ Pausar</button>
+            <button class="btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: var(--success);" onclick="openFinishModal(${att.id})">✅ Finalizar</button>
+        `;
+            }
+            return '';
+        }
+
+        async function updateAttentionStatus(id, status) {
+            await fetch(`/attentions/update_status/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadAttentions();
+        }
+
+        function openNewAttentionModal() {
+            document.getElementById('newAttentionModal').style.display = 'flex';
+        }
+
+        async function createAttention() {
+            const patient_id = document.getElementById('attPatientSelect').value;
+            const notes = document.getElementById('attNotes').value;
+            if (!patient_id) return alert("Seleccione un paciente");
+
+            const res = await fetch('/attentions/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, notes })
+            });
+
+            if (res.ok) {
+                document.getElementById('newAttentionModal').style.display = 'none';
+                loadAttentions();
+            } else {
+                const err = await res.json();
+                alert(err.detail);
+            }
+        }
+
+        // --- FINANCE LOGIC ---
+        let ticketItems = [];
+
+        function openFinishModal(attId) {
+            document.getElementById('finishAttId').value = attId;
+            ticketItems = [];
+            renderTicketPreview();
+            document.getElementById('finishAttentionModal').style.display = 'flex';
+        }
+
+        function updateTicketPrice() {
+            const sel = document.getElementById('ticketServiceSelect');
+            const opt = sel.options[sel.selectedIndex];
+            if (sel.value === 'custom') {
+                document.getElementById('customServiceDiv').style.display = 'block';
+                document.getElementById('ticketItemPrice').value = '';
+            } else {
+                document.getElementById('customServiceDiv').style.display = 'none';
+                document.getElementById('ticketItemPrice').value = opt.getAttribute('data-price');
+            }
+        }
+
+        function addTicketItem() {
+            const sel = document.getElementById('ticketServiceSelect');
+            let desc, price;
+
+            if (sel.value === 'custom') {
+                desc = document.getElementById('customServiceName').value;
+                price = parseFloat(document.getElementById('ticketItemPrice').value);
+            } else {
+                desc = sel.options[sel.selectedIndex].getAttribute('data-name');
+                price = parseFloat(document.getElementById('ticketItemPrice').value);
+            }
+
+            const qty = parseInt(document.getElementById('ticketItemQty').value);
+
+            if (!desc || isNaN(price) || price < 0) return alert("Datos inválidos");
+
+            ticketItems.push({ description: desc, price: price, quantity: qty });
+            renderTicketPreview();
+        }
+
+        function renderTicketPreview() {
+            const tbody = document.querySelector('#ticketPreviewTable tbody');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            ticketItems.forEach((item, idx) => {
+                const sub = item.price * item.quantity;
+                total += sub;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td>${item.description}</td>
+            <td>${item.quantity}</td>
+            <td>$${sub.toFixed(2)}</td>
+            <td style="cursor:pointer; color:red;" onclick="removeTicketItem(${idx})">🗑️</td>
+        `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('ticketTotal').innerText = total.toFixed(2);
+        }
+
+        function removeTicketItem(idx) {
+            ticketItems.splice(idx, 1);
+            renderTicketPreview();
+        }
+
+        async function submitFinishAttention() {
+            const attId = document.getElementById('finishAttId').value;
+            const notes = document.getElementById('finishNotes').value;
+
+            if (ticketItems.length === 0) return alert("Agregue al menos un item");
+
+            const res = await fetch(`/attentions/finish/${attId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: ticketItems, notes })
+            });
+
+            if (res.ok) {
+                document.getElementById('finishAttentionModal').style.display = 'none';
+                loadAttentions();
+                alert("Consulta finalizada y Ticket generado.");
+            } else {
+                alert("Error al finalizar");
+            }
+        }
+
+        async function loadFinanceMetrics(period) {
+            const res = await fetch(`/finance/metrics?period=${period}`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('finance-total').innerText = `$${data.total_revenue.toFixed(2)}`;
+                document.getElementById('finance-count').innerText = data.ticket_count;
+                loadTickets();
+            }
+        }
+
+        async function loadTickets() {
+            const res = await fetch('/finance/tickets');
+            if (res.ok) {
+                const data = await res.json();
+                const tbody = document.querySelector('#tickets-table tbody');
+                tbody.innerHTML = '';
+                data.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                <td>#${t.number}</td>
+                <td>${t.date}</td>
+                <td>${t.patient}</td>
+                <td>$${t.total.toFixed(2)}</td>
+                <td><span class="status-tag status-attended">${t.status}</span></td>
+                <td>
+                    <button class="btn" style="padding:0.2rem;" onclick="window.open('/finance/ticket/${t.id}/pdf', '_blank')">📄 PDF</button>
+                </td>
+            `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // Hook into showSection
+        const oldShowSection = window.showSection || function () { };
+        window.showSection = function (id, el) {
+            // Hide all first (basic implementation, assuming original handled logic)
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            // Show target
+            document.getElementById('section-' + id).style.display = 'block';
+            if (el) el.classList.add('active');
+
+            // Logic hooks
+            if (id === 'atenciones') loadAttentions();
+            if (id === 'caja') loadFinanceMetrics('today');
+
+            // Update hash
+            window.location.hash = id;
+        }
+    </script>
+</body>
+
+</html>
