@@ -24,11 +24,13 @@ class StorageService:
             res = self.supabase.storage.from_(self.bucket_name).upload(
                 file=file_bytes,
                 path=path,
-                file_options={"content-type": content_type, "upsert": "true"}
+                file_options={"content-type": content_type, "upsert": True}
             )
             return res
         except Exception as e:
-            print(f"Error uploading to Supabase: {e}")
+            import traceback
+            print(f"Error uploading to Supabase: {str(e)}")
+            traceback.print_exc()
             return None
 
     def get_public_url(self, path: str):

@@ -682,10 +682,25 @@
         </div>
     </div>
 
-    <!-- Password Modal -->
+    <!-- Configuration Modal (Profile + Password) -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
-            <h2>🔑 Cambiar Contraseña</h2>
+            <h2>⚙️ Configuración de Perfil</h2>
+            
+            <h3 style="margin-top: 1rem; font-size: 1rem; color: var(--primary);">Datos Profesionales</h3>
+            <div class="form-group">
+                <label>Nombre Completo (como aparecerá en firmas)</label>
+                <input type="text" id="profFullName" placeholder="Ej: Dr. Juan Pérez" value="{{ user.full_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Matrícula / Registro Profesional</label>
+                <input type="text" id="profLicense" placeholder="Ej: MP 1234 / MN 5678" value="{{ user.license_number or '' }}">
+            </div>
+            <button class="btn" style="width: 100%; margin-bottom: 1.5rem;" onclick="submitProfileUpdate()">Guardar Datos Profesionales</button>
+
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+            <h3 style="font-size: 1rem; color: var(--primary);">Seguridad</h3>
             <div class="form-group">
                 <label>Contraseña Actual</label>
                 <input type="password" id="oldPass" placeholder="••••••••">
@@ -695,9 +710,9 @@
                 <input type="password" id="newPass" placeholder="••••••••">
             </div>
             <div style="display: flex; gap: 1rem;">
-                <button class="btn" style="flex: 1;" onclick="submitPasswordChange()">Guardar</button>
+                <button class="btn" style="flex: 1;" onclick="submitPasswordChange()">Actualizar Contraseña</button>
                 <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
-                    onclick="closePasswordModal()">Cancelar</button>
+                    onclick="closePasswordModal()">Cerrar</button>
             </div>
         </div>
     </div>
@@ -939,6 +954,24 @@
             } else {
                 const err = await res.json();
                 alert('Error: ' + (err.detail || 'No se pudo actualizar la contraseña.'));
+            }
+        }
+
+        async function submitProfileUpdate() {
+            const full_name = document.getElementById('profFullName').value;
+            const license_number = document.getElementById('profLicense').value;
+
+            const res = await fetch('/admin/update_profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name, license_number })
+            });
+
+            if (res.ok) {
+                alert('¡Datos profesionales actualizados!');
+                // Optional: update UI elements that show these names if any
+            } else {
+                alert('Error al actualizar el perfil profesional.');
             }
         }
 

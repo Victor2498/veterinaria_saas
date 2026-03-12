@@ -355,7 +355,9 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
             next_dose_date=next_dt,
             batch_number=batch_number,
             is_signed=is_signed,
-            signed_at=datetime.now() if is_signed else None
+            signed_at=datetime.now() if is_signed else None,
+            signature_data=f"Firmado por: {user.full_name or user.username} - Mat: {user.license_number or '---'}" if is_signed else None,
+            vet_stamp=f"{user.full_name}\nMat. {user.license_number}" if is_signed else None
         )
         session.add(new_vac)
         await session.commit()
@@ -538,4 +540,24 @@ async def export_patients_csv(username: str = Depends(admin_required)):
         headers = {
             'Content-Disposition': f'attachment; filename="backup_pacientes_{datetime.now().strftime("%Y%m%d")}.csv"'
         }
-        return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8')), media_type="text/csv", headers=headers)
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode('utf-8-sig')),
+            media_type="text/csv",
+            headers=headers
+        )
+
+@router.post("/update_profile")
+async def update_profile(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    full_name = data.get("full_name")
+    license_number = data.get("license_number")
+    
+    async with AsyncSessionLocal() as session:
+        user_res = await session.execute(select(User).where(User.username == username))
+        user = user_res.scalar()
+        if not user: raise HTTPException(status_code=404)
+        
+        user.full_name = full_name
+        user.license_number = license_number
+        await session.commit()
+        return {"status": "success", "message": "Perfil profesional actualizado"}

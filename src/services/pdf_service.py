@@ -118,10 +118,15 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
             if is_digital:
                 # Digital Row
                 lote = v.batch_number if v.batch_number else "-"
-                firma_placeholder = "Firmado Digitalmente" if v.is_signed else ""
-                # Si tuviéramos imagen de firma, la procesaríamos aquí usarndo reportlab.platypus.Image
                 
-                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, firma_placeholder, prox])
+                # Check for stamp/signature data stored in the vaccination record
+                signature_info = ""
+                if v.signature_data:
+                    signature_info = v.signature_data # This could be "Firmado por Dr. X - Mat 123"
+                elif v.is_signed:
+                    signature_info = "Firmado Digitalmente"
+                
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, Paragraph(signature_info, styles['Normal']), prox])
             else:
                 # Basic Row
                 vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), "", prox])

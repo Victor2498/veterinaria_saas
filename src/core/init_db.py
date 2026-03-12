@@ -36,6 +36,10 @@ async def init_db():
             ("vaccinations", "signature_hash", "VARCHAR"),
             ("vaccinations", "signature_data", "TEXT"),
             ("vaccinations", "vet_stamp", "TEXT"),
+            ("users", "full_name", "VARCHAR"),
+            ("users", "license_number", "VARCHAR"),
+            ("users", "signature_img", "VARCHAR"),
+            ("users", "stamp_img", "VARCHAR"),
         ]
         
         for table, col, col_type in alterations:

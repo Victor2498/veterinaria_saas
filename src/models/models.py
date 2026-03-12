@@ -40,6 +40,12 @@ class User(Base):
     org_id = Column(Integer, ForeignKey("organizations.id"))
     is_admin = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False)
+    
+    # Professional Profile
+    full_name = Column(String, nullable=True) # Nombre Completo Profesional
+    license_number = Column(String, nullable=True) # Matrícula / Registro
+    signature_img = Column(String, nullable=True) # URL de imagen de firma
+    stamp_img = Column(String, nullable=True) # URL de imagen de sello
 
     organization = relationship("Organization", back_populates="users")
     attentions = relationship("MedicalAttention", back_populates="vet")
@@ -125,7 +131,7 @@ class Vaccination(Base):
     patient = relationship("Patient", back_populates="vaccinations")
 
 class DigitalCertificate(Base):
-    __tablename__ = "premium_certificates"
+    __tablename__ = "digital_certificates"
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id"), index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), index=True)
