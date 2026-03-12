@@ -67,6 +67,7 @@ class Owner(Base):
 
     organization = relationship("Organization", back_populates="owners")
     patients = relationship("Patient", back_populates="owner")
+    appointments = relationship("Appointment", back_populates="owner")
 
 class Patient(Base):
     __tablename__ = "patients"
@@ -88,7 +89,6 @@ class Patient(Base):
     owner = relationship("Owner", back_populates="patients")
     vaccinations = relationship("Vaccination", back_populates="patient")
     clinical_records = relationship("ClinicalRecord", back_populates="patient")
-    appointments = relationship("Appointment", back_populates="patient")
     digital_certificates = relationship("DigitalCertificate", back_populates="patient")
     attentions = relationship("MedicalAttention", back_populates="patient")
 
@@ -154,7 +154,7 @@ class Appointment(Base):
     )
 
     organization = relationship("Organization", back_populates="appointments")
-    patient = relationship("Patient", back_populates="appointments")
+    owner = relationship("Owner", back_populates="appointments")
 
 class MedicalAttention(Base):
     __tablename__ = "medical_attentions"
