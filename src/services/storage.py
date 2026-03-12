@@ -10,7 +10,7 @@ class StorageService:
             self.supabase: Client = None
         else:
             self.supabase: Client = create_client(url, key)
-            self.bucket_name = "certificados-premium"
+            self.bucket_name = "certificados"
 
     def upload_file(self, file_bytes: bytes, path: str, content_type: str = "application/pdf"):
         """Sube un archivo a Supabase Storage."""
