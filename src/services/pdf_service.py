@@ -107,7 +107,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         name_lower = v.vaccine_name.lower()
         fecha = v.date_administered.strftime("%d/%m/%Y")
         prox = v.next_dose_date.strftime("%d/%m/%Y") if v.next_dose_date else "-"
-        
+        is_desp = any(k in name_lower for k in desp_keywords)
         
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
