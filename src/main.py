@@ -24,7 +24,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(superadmin.router) # SaaS Owner Panel
 app.include_router(webhooks.router)
-app.include_router(certificates.router)
+app.include_router(certificates.router, prefix="/admin")
 app.include_router(verify.router)
 app.include_router(attentions.router)
 app.include_router(finance.router)
