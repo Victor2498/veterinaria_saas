@@ -4,6 +4,7 @@ import hashlib
 from datetime import datetime
 from fpdf import FPDF
 import segno
+from src.services.image_processor import process_transparency
 
 class PDFCertificado(FPDF):
     def __init__(self, watermark_text="VETERINARIA SAAS"):
@@ -116,7 +117,9 @@ def generar_certificado_vacunacion(
         try:
             resp = requests.get(firma_sello_url, timeout=10)
             if resp.status_code == 200:
-                sig_bytes = io.BytesIO(resp.content)
+                # Apply transparency processing
+                processed_bytes = process_transparency(resp.content)
+                sig_bytes = io.BytesIO(processed_bytes)
         except: pass
 
     # Table Headers

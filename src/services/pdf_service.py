@@ -7,6 +7,7 @@ from datetime import datetime
 import io
 import qrcode
 import requests
+from src.services.image_processor import process_transparency
 
 
 def _get_base_elements(org_name, title, is_digital=False):
@@ -110,7 +111,8 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         try:
             resp = requests.get(signature_url, timeout=10)
             if resp.status_code == 200:
-                sig_bytes = resp.content
+                # Apply transparency processing
+                sig_bytes = process_transparency(resp.content)
         except:
             pass
             
@@ -119,7 +121,8 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         try:
             resp = requests.get(firma_org_url, timeout=10)
             if resp.status_code == 200:
-                firma_bytes = resp.content
+                # Apply transparency processing
+                firma_bytes = process_transparency(resp.content)
         except: pass
         
     def get_firma_vet():
