@@ -1503,58 +1503,68 @@
 
             try {
                 const res = await fetch(`/admin/certificates/emit_advanced/${vaccinationId}`, { method: 'POST' });
-                const data = await res.json();
                 
-                if (data.status === 'success') {
-                    // Open the custom PDF Preview Modal
-                    document.getElementById('pdfPreviewFrame').src = data.pdf_url;
-                    
-                    // Configure WhatsApp Button
-                    const waBtn = document.getElementById('btnSendWhatsapp');
-                    waBtn.onclick = async function() {
-                        const originalWaText = waBtn.innerHTML;
-                        waBtn.innerHTML = "Enviando...";
-                        waBtn.disabled = true;
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        // Open the custom PDF Preview Modal
+                        document.getElementById('pdfPreviewFrame').src = data.pdf_url;
                         
-                        try {
-                            const waRes = await fetch(`/admin/certificates/send_whatsapp/${data.hash}`, { method: 'POST' });
-                            const waData = await waRes.json();
-                            if (waData.status === 'success') {
-                                waBtn.innerHTML = "✅ Enviado";
-                                waBtn.style.background = "var(--success)";
-                                Swal.fire({
-                                    title: '¡Enviado!',
-                                    text: 'El documento ha sido enviado por WhatsApp exitosamente.',
-                                    icon: 'success',
-                                    confirmButtonColor: '#25D366'
-                                });
-                                setTimeout(() => {
+                        // Configure WhatsApp Button
+                        const waBtn = document.getElementById('btnSendWhatsapp');
+                        waBtn.onclick = async function() {
+                            const originalWaText = waBtn.innerHTML;
+                            waBtn.innerHTML = "Enviando...";
+                            waBtn.disabled = true;
+                            
+                            try {
+                                const waRes = await fetch(`/admin/certificates/send_whatsapp/${data.hash}`, { method: 'POST' });
+                                const waData = await waRes.json();
+                                if (waData.status === 'success') {
+                                    waBtn.innerHTML = "✅ Enviado";
+                                    waBtn.style.background = "var(--success)";
+                                    Swal.fire({
+                                        title: '¡Enviado!',
+                                        text: 'El documento ha sido enviado por WhatsApp exitosamente.',
+                                        icon: 'success',
+                                        confirmButtonColor: '#25D366'
+                                    });
+                                    setTimeout(() => {
+                                        waBtn.innerHTML = originalWaText;
+                                        waBtn.style.background = "#25D366";
+                                        waBtn.disabled = false;
+                                    }, 3000);
+                                } else {
+                                    Swal.fire('Error', "⚠️ Error enviando WhatsApp: " + (waData.detail || "Desconocido"), 'error');
                                     waBtn.innerHTML = originalWaText;
-                                    waBtn.style.background = "#25D366";
                                     waBtn.disabled = false;
-                                }, 3000);
-                            } else {
-                                Swal.fire('Error', "⚠️ Error enviando WhatsApp: " + (waData.detail || "Desconocido"), 'error');
+                                }
+                            } catch(e) {
+                                Swal.fire('Error de conexión', 'No se pudo contactar al servidor para el envío.', 'error');
                                 waBtn.innerHTML = originalWaText;
                                 waBtn.disabled = false;
                             }
-                        } catch(e) {
-                            Swal.fire('Error de conexión', 'No se pudo contactar al servidor para el envío.', 'error');
-                            waBtn.innerHTML = originalWaText;
-                            waBtn.disabled = false;
-                        }
-                    };
-                    
-                    document.getElementById('pdfPreviewModal').style.display = 'flex';
-                    
-                    // Refresh patient data in the background
-                    openEditPatientModal(document.getElementById('editPatId').value);
+                        };
+                        
+                        document.getElementById('pdfPreviewModal').style.display = 'flex';
+                        
+                        // Refresh patient data in the background
+                        openEditPatientModal(document.getElementById('editPatId').value);
+                    } else {
+                        Swal.fire('Atención', data.detail || "Error al emitir el certificado.", 'warning');
+                    }
                 } else {
-                    Swal.fire('Atención', data.detail || "Error al emitir el certificado.", 'warning');
+                    // Non-OK response but connection was made
+                    let detail = "Error en el servidor";
+                    try {
+                        const errData = await res.json();
+                        detail = errData.detail || detail;
+                    } catch(e) { /* ignore JSON parse error on non-json error pages */ }
+                    Swal.fire('Error (' + res.status + ')', detail, 'error');
                 }
             } catch (e) {
                 console.error(e);
-                Swal.fire('Error crítico', "Error de conexión emitiendo certificado.", 'error');
+                Swal.fire('Error crítico', "Error de conexión emitiendo certificado. Revisa la consola o los logs del servidor.", 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
