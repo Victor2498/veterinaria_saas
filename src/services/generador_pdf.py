@@ -126,7 +126,8 @@ def generar_certificado_vacunacion(
     pdf.cell(50, 4, "Escanee para validar autenticidad", align='C')
     
     # OUTPUT AND HASH
-    pdf_bytes = pdf.output(dest='S')
+    pdf_bytes_array = pdf.output(dest='S')
+    pdf_bytes = bytes(pdf_bytes_array)
     
     hash_sha256 = hashlib.sha256(pdf_bytes).hexdigest()
 

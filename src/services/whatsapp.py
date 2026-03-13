@@ -67,12 +67,10 @@ async def send_whatsapp_document(phone: str, document_url: str, caption: str = "
     
     payload = {
         "number": clean_phone,
-        "mediaMessage": {
-            "mediatype": "document",
-            "caption": caption,
-            "media": document_url,
-            "fileName": "Certificado_Vacunacion.pdf"
-        },
+        "mediatype": "document",
+        "caption": caption,
+        "media": document_url,
+        "fileName": "Certificado_Vacunacion.pdf",
         "options": {"delay": 1200, "presence": "composing", "linkPreview": False}
     }
 
