@@ -241,19 +241,24 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
             except Exception as e:
                 print(f"Error loading signature image: {e}")
         
-        sig_col.append(Paragraph(f"<b>Dr/a. {vet_name or 'Profesional'}</b>", styles['Normal']))
+        # Fix redundancy: Check if name already starts with Dr. or Dra.
+        clean_name = vet_name or 'Profesional'
+        prof_prefix = "Dr/a. " if not (clean_name.strip().startswith("Dr.") or clean_name.strip().startswith("Dra.")) else ""
+        
+        sig_col.append(Paragraph(f"<b>{prof_prefix}{clean_name}</b>", styles['Normal']))
         if vet_license:
             sig_col.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", styles['Normal']))
         
         # Main Footer Table: [QR + Legend] | [Signature + Info]
+        # Shift signature more to the right by adjusting column distribution
         footer_data = [[qr_col, sig_col]]
-        footer_table = Table(footer_data, colWidths=[3.25*inch, 3.25*inch])
+        footer_table = Table(footer_data, colWidths=[3.0*inch, 3.5*inch])
         footer_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('ALIGN', (0,0), (0,0), 'LEFT'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'), # Changed to RIGHT as requested
+            ('RIGHTPADDING', (1,0), (1,0), 30), # Extra padding from right edge
             ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
         
         elements.append(footer_table)

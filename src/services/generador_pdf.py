@@ -168,15 +168,19 @@ def generar_certificado_vacunacion(
     # Signature/Stamp on the right (parallel to QR)
     if firma_sello_url:
         try:
-            pdf.image(firma_sello_url, x=sig_x + 10, y=y_footer - 5, w=50)
+            pdf.image(firma_sello_url, x=sig_x + 15, y=y_footer - 5, w=50)
         except Exception as e:
             print(f"Error cargando el sello: {e}")
             
-    pdf.set_xy(sig_x, y_footer + 32)
+    pdf.set_xy(sig_x + 5, y_footer + 32)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(70, 5, f"Dr/a. {veterinario_nombre}", ln=True, align='C')
-    pdf.set_x(sig_x)
+    
+    # Avoid redundant Dr/a. if name already starts with Dr. or Dra.
+    prof_prefix = "Dr/a. " if not (veterinario_nombre.strip().startswith("Dr.") or veterinario_nombre.strip().startswith("Dra.")) else ""
+    pdf.cell(70, 5, f"{prof_prefix}{veterinario_nombre}", ln=True, align='C')
+    
+    pdf.set_x(sig_x + 5)
     pdf.set_font("Helvetica", "", 9)
     pdf.cell(70, 5, f"Matrícula: {veterinario_matricula}", ln=True, align='C')
 
