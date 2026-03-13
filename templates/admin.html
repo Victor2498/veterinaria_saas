@@ -696,6 +696,15 @@
                 <label>Matrícula / Registro Profesional</label>
                 <input type="text" id="profLicense" placeholder="Ej: MP 1234 / MN 5678" value="{{ user.license_number or '' }}">
             </div>
+            <div class="form-group">
+                <label>Firma / Sello (PNG o JPG)</label>
+                <input type="file" id="profSignature" accept="image/png, image/jpeg" style="width: 100%; padding: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;">
+                {% if user.signature_img %}
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--success);">
+                    ✅ Ya tienes una firma guardada (<a href="{{ user.signature_img }}" target="_blank" style="color:var(--primary);">Ver actual</a>). Sube otra para reemplazarla.
+                </div>
+                {% endif %}
+            </div>
             <button class="btn" style="width: 100%; margin-bottom: 1.5rem;" onclick="submitProfileUpdate()">Guardar Datos Profesionales</button>
 
             <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
@@ -958,20 +967,40 @@
         }
 
         async function submitProfileUpdate() {
-            const full_name = document.getElementById('profFullName').value;
-            const license_number = document.getElementById('profLicense').value;
+            const formData = new FormData();
+            formData.append('full_name', document.getElementById('profFullName').value);
+            formData.append('license_number', document.getElementById('profLicense').value);
+            
+            const fileInput = document.getElementById('profSignature');
+            if (fileInput.files.length > 0) {
+                formData.append('signature', fileInput.files[0]);
+            }
 
-            const res = await fetch('/admin/update_profile', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ full_name, license_number })
-            });
+            // Disable button during upload
+            const btn = document.querySelector('button[onclick="submitProfileUpdate()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Subiendo...";
+            btn.disabled = true;
 
-            if (res.ok) {
-                alert('¡Datos profesionales actualizados!');
-                // Optional: update UI elements that show these names if any
-            } else {
-                alert('Error al actualizar el perfil profesional.');
+            try {
+                const res = await fetch('/admin/update_profile', {
+                    method: 'POST',
+                    body: formData // No Content-Type header needed, fetch sets boundaries automatically for FormData
+                });
+
+                if (res.ok) {
+                    alert('¡Datos profesionales actualizados!');
+                    window.location.reload();
+                } else {
+                    const data = await res.json();
+                    alert('Error: ' + (data.detail || 'Error al actualizar el perfil profesional.'));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de red.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         }
 

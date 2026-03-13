@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from src.core.database import AsyncSessionLocal
@@ -546,12 +546,17 @@ async def export_patients_csv(username: str = Depends(admin_required)):
             headers=headers
         )
 
+from src.services.storage import storage_service
+import uuid
+import mimetypes
+
 @router.post("/update_profile")
-async def update_profile(request: Request, username: str = Depends(admin_required)):
-    data = await request.json()
-    full_name = data.get("full_name")
-    license_number = data.get("license_number")
-    
+async def update_profile(
+    full_name: str = Form(...),
+    license_number: str = Form(None),
+    signature: UploadFile = File(None),
+    username: str = Depends(admin_required)
+):
     async with AsyncSessionLocal() as session:
         user_res = await session.execute(select(User).where(User.username == username))
         user = user_res.scalar()
@@ -559,5 +564,27 @@ async def update_profile(request: Request, username: str = Depends(admin_require
         
         user.full_name = full_name
         user.license_number = license_number
+        
+        if signature and signature.filename:
+            file_bytes = await signature.read()
+            ext = mimetypes.guess_extension(signature.content_type) or ".png"
+            # Limit to images only
+            if "image" not in signature.content_type:
+                raise HTTPException(status_code=400, detail="Solo se permiten imágenes para la firma")
+                
+            path = f"{user.id}_{uuid.uuid4().hex[:8]}{ext}"
+            
+            # Subir a supabase (asumiendo que storage_service soporta un bucket particular si modificas el init o se ajusta a "certificados")
+            # Usaremos el bucket por defecto que tiene storage_service
+            res, err = storage_service.upload_file(file_bytes, path, signature.content_type)
+            if err:
+                print(f"Error subiendo firma: {err}")
+                raise HTTPException(status_code=500, detail="Error al subir la imagen de la firma")
+                
+            public_url = storage_service.get_public_url(path)
+            if public_url:
+                user.signature_img = public_url
+                user.stamp_img = public_url # Guardamos en los dos campos por conveniencia
+        
         await session.commit()
         return {"status": "success", "message": "Perfil profesional actualizado"}
