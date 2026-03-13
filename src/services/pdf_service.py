@@ -248,15 +248,16 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         qr_col = [qr_img, Spacer(1, 5), legend_text]
         
-        # --- Signature and Stamp Section ---
+        # Professional Info Paragraphs
+        centered_style = ParagraphStyle('CenteredStyle', parent=styles['Normal'], alignment=1) # TA_CENTER = 1
+        
+        # Professional block elements
         sig_col = []
-        if signature_url:
+        if sig_bytes:
             try:
-                response = requests.get(signature_url)
-                if response.status_code == 200:
-                    img_data = io.BytesIO(response.content)
-                    sig_img = Image(img_data, width=1.8*inch, height=0.9*inch)
-                    sig_col.append(sig_img)
+                sig_img = Image(io.BytesIO(sig_bytes), width=1.8*inch, height=0.9*inch)
+                sig_img.hAlign = 'CENTER'
+                sig_col.append(sig_img)
             except Exception as e:
                 print(f"Error loading signature image: {e}")
         
@@ -264,20 +265,19 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         clean_name = vet_name or 'Profesional'
         prof_prefix = "Dr/a. " if not (clean_name.strip().startswith("Dr.") or clean_name.strip().startswith("Dra.")) else ""
         
-        sig_col.append(Paragraph(f"<b>{prof_prefix}{clean_name}</b>", styles['Normal']))
+        sig_col.append(Paragraph(f"<b>{prof_prefix}{clean_name}</b>", centered_style))
         if vet_license:
-            sig_col.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", styles['Normal']))
+            sig_col.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", centered_style))
         
-        # Main Footer Table: [QR + Legend] | [Signature + Info]
-        # Shift signature more to the right by adjusting column distribution
+        # Main Footer Table: [QR + Legend] | [Signature Block]
         footer_data = [[qr_col, sig_col]]
-        footer_table = Table(footer_data, colWidths=[3.0*inch, 3.5*inch])
+        footer_table = Table(footer_data, colWidths=[3.25*inch, 3.25*inch])
         footer_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('ALIGN', (0,0), (0,0), 'LEFT'),
-            ('ALIGN', (1,0), (1,0), 'RIGHT'), # Changed to RIGHT as requested
-            ('RIGHTPADDING', (1,0), (1,0), 30), # Extra padding from right edge
+            ('ALIGN', (1,0), (1,0), 'CENTER'),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ]))
         
         elements.append(footer_table)

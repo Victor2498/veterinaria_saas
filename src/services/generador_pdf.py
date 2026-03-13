@@ -185,13 +185,18 @@ def generar_certificado_vacunacion(
     pdf.multi_cell(40, 3, f"Escanee para verificar autenticidad.\n{validacion_url}", align='C')
     
     # Signature/Stamp on the right (parallel to QR)
+    sig_w = 50
+    sig_center_x = sig_x + 35 # Centered in the right area
+    
     if firma_sello_url:
         try:
-            pdf.image(firma_sello_url, x=sig_x + 15, y=y_footer - 5, w=50)
+            # Place image centered at sig_center_x
+            pdf.image(firma_sello_url, x=sig_center_x - (sig_w/2), y=y_footer - 5, w=sig_w)
         except Exception as e:
             print(f"Error cargando el sello: {e}")
             
-    pdf.set_xy(sig_x + 5, y_footer + 32)
+    # Text block centered at the same x
+    pdf.set_xy(sig_center_x - 35, y_footer + 32)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "B", 10)
     
@@ -199,7 +204,7 @@ def generar_certificado_vacunacion(
     prof_prefix = "Dr/a. " if not (veterinario_nombre.strip().startswith("Dr.") or veterinario_nombre.strip().startswith("Dra.")) else ""
     pdf.cell(70, 5, f"{prof_prefix}{veterinario_nombre}", ln=True, align='C')
     
-    pdf.set_x(sig_x + 5)
+    pdf.set_x(sig_center_x - 35)
     pdf.set_font("Helvetica", "", 9)
     pdf.cell(70, 5, f"Matrícula: {veterinario_matricula}", ln=True, align='C')
 
