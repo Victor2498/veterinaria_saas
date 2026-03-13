@@ -131,9 +131,9 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
 
     def get_firma_sello():
         if firma_bytes:
-            return Image(io.BytesIO(firma_bytes), width=160, height=90)
+            return Image(io.BytesIO(firma_bytes), width=95, height=54)
         elif sig_bytes:
-            return Image(io.BytesIO(sig_bytes), width=160, height=90)
+            return Image(io.BytesIO(sig_bytes), width=95, height=54)
         return ""
 
     # --- SECCIÓN 1: PLAN SANITARIO (VACUNAS) ---
