@@ -134,8 +134,9 @@ def generate_pro_certificate(data):
         if firma_bytes:
             # Center firma in cell
             # X position is after first 3 columns: 15 (margin) + 25 + 60 + 30 = 130
+            # Width increased from 20 to 30 for better fit
             firma_bytes.seek(0)
-            pdf.image(firma_bytes, x=130 + (col_widths[3]-20)/2, y=current_y + 2, w=20)
+            pdf.image(firma_bytes, x=130 + (col_widths[3]-30)/2, y=current_y + 1, w=30)
             
         pdf.cell(col_widths[4], 12, vac.get("proxima", "-"), border='B', fill=True, align='C')
         pdf.ln()
@@ -179,87 +180,35 @@ def generate_pro_certificate(data):
         pdf.cell(desp_col_widths[3], 12, "", border='B', fill=True)
         if firma_bytes:
             # X position: 15 (margin) + 30 + 30 + 80 = 155
+            # Width increased from 20 to 35 for better fit
             firma_bytes.seek(0)
-            pdf.image(firma_bytes, x=155 + (desp_col_widths[3]-20)/2, y=current_y + 2, w=20)
+            pdf.image(firma_bytes, x=155 + (desp_col_widths[3]-35)/2, y=current_y + 1, w=35)
             
         pdf.ln()
         fill = not fill
 
-    # D. BLOQUE DE VALIDACIÓN FINAL (Pie de Página)
-    # The block needs about 45mm height. A4 is 297mm.
-    # Bottom margin is 20mm. Max Y should be 277mm.
-    # If we start at 230, we end at ~275.
-    if pdf.get_y() > 225:
+    # D. BLOQUE DE VALIDACIÓN FINAL (Centro - Solo QR)
+    if pdf.get_y() > 240:
         pdf.add_page()
     
-    pdf.set_y(232) # Position for the footer block
+    qr_w = 40
+    qr_x = (210 - qr_w) / 2
+    qr_y = 235
     
-    # QR Code (Left)
+    # Generar QR
     validacion_url = data.get("urls", {}).get("validacion", "https://supabase.com")
     qr = segno.make(validacion_url)
     qr_buffer = io.BytesIO()
     qr.save(qr_buffer, kind='png', scale=5)
     
-    qr_x = 15
-    qr_y = pdf.get_y()
-    pdf.image(qr_buffer, x=qr_x, y=qr_y, w=30, h=30)
+    pdf.image(qr_buffer, x=qr_x, y=qr_y, w=qr_w, h=qr_w)
     
-    pdf.set_xy(qr_x, qr_y + 31)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(35, 4, "VERIFICACIÓN ONLINE", align='L')
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "", 7)
-    pdf.set_x(qr_x)
-    pdf.cell(35, 3, "Escanee para verificar autenticidad", align='L')
-
-    # Sello Profesional (Right)
-    sello_url = data.get("urls", {}).get("sello")
-    sello_bytes = None
-    if sello_url:
-        try:
-            if sello_url.startswith(("http://", "https://")):
-                resp = requests.get(sello_url, timeout=5)
-                if resp.status_code == 200:
-                    sello_bytes = io.BytesIO(resp.content)
-                else:
-                    print(f"DEBUG: Sello URL returned {resp.status_code}")
-            else:
-                # Local path
-                with open(sello_url, "rb") as f:
-                    sello_bytes = io.BytesIO(f.read())
-            
-            # Apply transparency processing
-            if sello_bytes:
-                processed_bytes = process_transparency(sello_bytes.getvalue())
-                sello_bytes = io.BytesIO(processed_bytes)
-                
-        except Exception as e:
-            print(f"DEBUG: Error downloading/loading/processing sello: {e}")
-
-    # Positioning Sello
-    sello_x = 150
-    sello_y = qr_y - 2 
-    sello_w = 40
-    
-    if sello_bytes:
-        pdf.image(sello_bytes, x=sello_x, y=sello_y, w=sello_w)
-        # Superimpose signature
-        if firma_bytes:
-            # Stamp signature on top of seal center
-            # Re-seek since it was used in tables
-            firma_bytes.seek(0)
-            pdf.image(firma_bytes, x=sello_x + 5, y=sello_y + 8, w=30)
-            
-    # Professional Info text below seal
-    profesional = data.get("profesional", {})
-    pdf.set_xy(sello_x - 10, qr_y + 31)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(sello_w + 20, 5, profesional.get("nombre", "Veterinario Responsable"), align='C')
-    pdf.ln(5)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_x(sello_x - 10)
-    pdf.cell(sello_w + 20, 4, f"M.P. {profesional.get('matricula', 'N/D')}", align='C')
+    # ID de Validación centrado abajo del QR
+    pdf.set_xy(15, qr_y + qr_w + 3)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(180, 4, f"CÓDIGO DE VALIDACIÓN: {data.get('id', 'N/A')}", align='C', ln=True)
+    pdf.ln(2)
 
     # SHA-256 Calculation
     pdf_bytes_array = pdf.output(dest='S')
