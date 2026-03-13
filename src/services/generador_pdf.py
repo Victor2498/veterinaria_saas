@@ -177,6 +177,4 @@ def generar_certificado_vacunacion(
     pdf_bytes = bytes(pdf_bytes_array)
     hash_sha256 = hashlib.sha256(pdf_bytes).hexdigest()
     
-    pdf.cell(0, 4, f"HASH DE INTEGRIDAD: {hash_sha256}", align='C')
-
     return pdf_bytes, hash_sha256
