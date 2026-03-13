@@ -96,9 +96,12 @@ def generate_pro_certificate(data):
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(51, 51, 51) # Dark Gray (#333333)
     
-    # Cache firma
+    # Cache firma y sello
     firma_url = data.get("urls", {}).get("firma")
+    sello_url = data.get("urls", {}).get("sello")
     firma_bytes = None
+    sello_bytes = None
+    
     if firma_url:
         try:
             if firma_url.startswith(("http://", "https://")):
@@ -118,6 +121,25 @@ def generate_pro_certificate(data):
         except Exception as e:
             print(f"DEBUG: Error loading/processing firma: {e}")
 
+    if sello_url:
+        try:
+            if sello_url.startswith(("http://", "https://")):
+                resp = requests.get(sello_url, timeout=5)
+                if resp.status_code == 200:
+                    sello_bytes = io.BytesIO(resp.content)
+            else:
+                # Local path
+                with open(sello_url, "rb") as f:
+                    sello_bytes = io.BytesIO(f.read())
+            
+            # Apply transparency processing
+            if sello_bytes:
+                processed_bytes = process_transparency(sello_bytes.getvalue(), threshold=230)
+                sello_bytes = io.BytesIO(processed_bytes)
+                
+        except Exception as e:
+            print(f"DEBUG: Error loading/processing sello: {e}")
+
     fill = False
     vacunas = data.get("vacunas", [])
     for vac in vacunas:
@@ -129,14 +151,21 @@ def generate_pro_certificate(data):
         pdf.cell(col_widths[1], 12, vac.get("nombre", "-"), border='B', fill=True, align='C')
         pdf.cell(col_widths[2], 12, vac.get("lote", "-"), border='B', fill=True, align='C')
         
-        # Firma Cell
+        # Firma & Sello Cell
         pdf.cell(col_widths[3], 12, "", border='B', fill=True)
-        if firma_bytes:
-            # Center firma in cell
-            # X position is after first 3 columns: 15 (margin) + 25 + 60 + 30 = 130
-            # Width increased from 20 to 30 for better fit
-            firma_bytes.seek(0)
-            pdf.image(firma_bytes, x=130 + (col_widths[3]-30)/2, y=current_y + 1, w=30)
+        # X position for signatures: 15 (margin) + 25 + 60 + 30 = 130
+        
+        with pdf.local_context(blend_mode='Multiply'):
+            if sello_bytes:
+                sello_bytes.seek(0)
+                # Width increased to 32
+                pdf.image(sello_bytes, x=130 + (col_widths[3]-32)/2, y=current_y + 0.5, w=32)
+                
+            if firma_bytes:
+                # Stamp firma on top of seal
+                # Width increased to 38
+                firma_bytes.seek(0)
+                pdf.image(firma_bytes, x=130 + (col_widths[3]-38)/2, y=current_y + 1, w=38)
             
         pdf.cell(col_widths[4], 12, vac.get("proxima", "-"), border='B', fill=True, align='C')
         pdf.ln()
@@ -176,13 +205,20 @@ def generate_pro_certificate(data):
         pdf.cell(desp_col_widths[1], 12, desp.get("peso", "-"), border='B', fill=True, align='C')
         pdf.cell(desp_col_widths[2], 12, desp.get("tratamiento", "-"), border='B', fill=True, align='C')
         
-        # Firma Cell
+        # Firma & Sello Cell
         pdf.cell(desp_col_widths[3], 12, "", border='B', fill=True)
-        if firma_bytes:
-            # X position: 15 (margin) + 30 + 30 + 80 = 155
-            # Width increased from 20 to 35 for better fit
-            firma_bytes.seek(0)
-            pdf.image(firma_bytes, x=155 + (desp_col_widths[3]-35)/2, y=current_y + 1, w=35)
+        # X position: 15 (margin) + 30 + 30 + 80 = 155
+        
+        with pdf.local_context(blend_mode='Multiply'):
+            if sello_bytes:
+                sello_bytes.seek(0)
+                # Width increased to 40
+                pdf.image(sello_bytes, x=155 + (desp_col_widths[3]-40)/2, y=current_y + 0.5, w=40)
+
+            if firma_bytes:
+                # Width increased to 50
+                firma_bytes.seek(0)
+                pdf.image(firma_bytes, x=155 + (desp_col_widths[3]-50)/2, y=current_y + 1, w=50)
             
         pdf.ln()
         fill = not fill

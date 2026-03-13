@@ -22,20 +22,17 @@ def process_transparency(image_bytes: bytes, threshold: int = 220, intensity_gai
             r, g, b, a = datas[i]
             luma = gray_datas[i]
             
-            # Mapeo de transparencia:
-            # Si luma > 250 -> alpha 0
-            # Si luma < 180 -> alpha 255
-            # Interpolación lineal en el medio
-            if luma > 250:
+            # Mapeo de transparencia optimizado para 'Multiply'
+            # Si luma > 245 -> alpha 0 (Totalmente blanco)
+            # Si luma < 160 -> alpha 255 (Tinta pura)
+            if luma > 245:
                 alpha = 0
-            elif luma < 180:
+            elif luma < 160:
                 alpha = 255
             else:
-                alpha = int((250 - luma) / (250 - 180) * 255)
+                alpha = int((245 - luma) / (245 - 160) * 255)
             
-            # Oscurecer la tinta (contraste): 
-            # Multiplicamos los canales originales para que la tinta sea más sólida
-            # Si es firma azul, queremos que siga siendo azul pero fuerte.
+            # Realce de color: oscurecemos los canales si hay tinta
             if alpha > 0:
                 f = 1.0 / intensity_gain
                 r = int(max(0, r * f))
