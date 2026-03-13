@@ -37,8 +37,11 @@ class StorageService:
             return None
             
         try:
+            # get_public_url in some versions returns a string, in others an object
             res = self.supabase.storage.from_(self.bucket_name).get_public_url(path)
-            return res
+            if hasattr(res, 'public_url'):
+                return str(res.public_url)
+            return str(res)
         except Exception as e:
             print(f"Error getting public URL: {e}")
             return None

@@ -116,14 +116,25 @@ async def emit_advanced_certificate(vaccination_id: int, request: Request, usern
         # Verify or sync VeterinaryProfile
         vet_res = await session.execute(select(VeterinaryProfile).where(VeterinaryProfile.matricula_profesional == (user.license_number or 'M-000')))
         vet_profile = vet_res.scalar()
+        
+        # Latest data from user
+        current_name = user.full_name or user.username
+        current_license = user.license_number or 'M-000'
+        current_signature = user.stamp_img or user.signature_img
+        
         if not vet_profile:
             vet_profile = VeterinaryProfile(
-                nombre_completo=user.full_name or user.username,
-                matricula_profesional=user.license_number or 'M-000',
+                nombre_completo=current_name,
+                matricula_profesional=current_license,
                 nombre_veterinaria=org.name,
-                firma_sello_url=user.stamp_img or user.signature_img
+                firma_sello_url=current_signature
             )
             session.add(vet_profile)
+            await session.flush()
+        else:
+            # Sync existing profile in case user updated their info
+            vet_profile.nombre_completo = current_name
+            vet_profile.firma_sello_url = current_signature
             await session.flush()
 
         # Build Document Token
