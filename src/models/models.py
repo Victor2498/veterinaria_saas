@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text, UniqueConstraint, Index, JSON
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.core.database import Base
@@ -204,5 +205,44 @@ class TicketItem(Base):
     unit_price = Column(Float)
     quantity = Column(Integer, default=1)
     subtotal = Column(Float)
-
     ticket = relationship("Ticket", back_populates="items")
+
+# Nuevas tablas requeridas para el sistema avanzado de certificados
+
+class VeterinaryProfile(Base):
+    __tablename__ = "perfiles_veterinarios"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_completo = Column(String)
+    matricula_profesional = Column(String)
+    nombre_veterinaria = Column(String)
+    firma_sello_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    certificados = relationship("VaccinationCertificate", back_populates="veterinario")
+
+class VaccinationCertificate(Base):
+    __tablename__ = "certificados_vacunacion"
+    id = Column(Integer, primary_key=True, index=True)
+    mascota_nombre = Column(String)
+    mascota_especie = Column(String)
+    dueno_nombre = Column(String)
+    veterinario_id = Column(Integer, ForeignKey("perfiles_veterinarios.id"))
+    vacunas_json = Column(JSON)
+    pdf_url = Column(String)
+    hash_control = Column(String)
+    token_validacion = Column(String, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    veterinario = relationship("VeterinaryProfile", back_populates="certificados")
+    registros_integridad = relationship("CertificateIntegrityRecord", back_populates="certificado")
+
+class CertificateIntegrityRecord(Base):
+    __tablename__ = "registro_integridad_certificados"
+    id = Column(Integer, primary_key=True, index=True)
+    certificado_id = Column(Integer, ForeignKey("certificados_vacunacion.id"))
+    hash_pdf = Column(String)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    verificado = Column(Boolean, default=True)
+
+    certificado = relationship("VaccinationCertificate", back_populates="registros_integridad")
+

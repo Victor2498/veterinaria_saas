@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.core.security import admin_required
 from src.core.database import AsyncSessionLocal
-from src.models.models import User, Organization, Patient, Vaccination, DigitalCertificate
+from src.models.models import User, Organization, Patient, Vaccination, DigitalCertificate, VaccinationCertificate, VeterinaryProfile, CertificateIntegrityRecord, Owner
 from src.services.pdf_service import generate_vaccination_certificate
+from src.services.generador_pdf import generar_certificado_vacunacion
 from src.services.storage import storage_service
 from sqlalchemy import select
 from datetime import datetime
@@ -86,6 +87,114 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
         await session.commit()
 
         return {"status": "success", "message": "Certificado generado y almacenado", "cert_hash": cert_hash, "verify_url": verify_url}
+
+@router.post("/emit_advanced/{vaccination_id}")
+async def emit_advanced_certificate(vaccination_id: int, request: Request, username: str = Depends(admin_required)):
+    """Emite un certificado de vacunación estricto para un registro usando fpdf2."""
+    async with AsyncSessionLocal() as session:
+        # Auth Config
+        res = await session.execute(
+            select(User, Organization)
+            .join(Organization, User.org_id == Organization.id)
+            .where(User.username == username)
+        )
+        row = res.first()
+        if not row: raise HTTPException(status_code=401)
+        user, org = row
+
+        # Fetch Validation Data
+        vac_res = await session.execute(
+            select(Vaccination, Patient, Owner)
+            .join(Patient, Vaccination.patient_id == Patient.id)
+            .join(Owner, Patient.owner_id == Owner.id)
+            .where(Vaccination.id == vaccination_id, Vaccination.org_id == org.id)
+        )
+        row_vac = vac_res.first()
+        if not row_vac: raise HTTPException(status_code=404, detail="Registro de vacuna no encontrado")
+        vaccination, patient, owner = row_vac
+        
+        # Verify or sync VeterinaryProfile
+        vet_res = await session.execute(select(VeterinaryProfile).where(VeterinaryProfile.matricula_profesional == (user.license_number or 'M-000')))
+        vet_profile = vet_res.scalar()
+        if not vet_profile:
+            vet_profile = VeterinaryProfile(
+                nombre_completo=user.full_name or user.username,
+                matricula_profesional=user.license_number or 'M-000',
+                nombre_veterinaria=org.name,
+                firma_sello_url=user.stamp_img or user.signature_img
+            )
+            session.add(vet_profile)
+            await session.flush()
+
+        # Build Document Token
+        token_validacion = str(uuid.uuid4())
+        base_url = str(request.base_url)
+        
+        # Build JSON Payload
+        vacunas_json = [{
+            "fecha": vaccination.date_administered.strftime("%Y-%m-%d") if vaccination.date_administered else "-",
+            "nombre": vaccination.vaccine_name,
+            "lote": vaccination.batch_number or "-",
+            "proxima": vaccination.next_dose_date.strftime("%Y-%m-%d") if vaccination.next_dose_date else "-"
+        }]
+
+        nombre_due = owner.name if owner.name else (owner.phone_number or "Dueño/Tutor")
+
+        try:
+            pdf_bytes, file_hash = generar_certificado_vacunacion(
+                nombre_veterinaria=org.name,
+                mascota_nombre=patient.name,
+                mascota_especie=patient.species or "Canino/Felino",
+                dueno_nombre=nombre_due,
+                veterinario_nombre=vet_profile.nombre_completo,
+                veterinario_matricula=vet_profile.matricula_profesional,
+                vacunas_json=vacunas_json,
+                token_validacion=token_validacion,
+                base_url=base_url,
+                firma_sello_url=vet_profile.firma_sello_url
+            )
+        except Exception as e:
+            print(f"Error generando PDF nuevo: {e}")
+            raise HTTPException(status_code=500, detail="Error generando el certificado en PDF")
+
+        file_path = f"certificados/{org.id}/{patient.id}/{file_hash}.pdf"
+        storage_res, error_msg = storage_service.upload_file(pdf_bytes, file_path)
+        
+        # Wait, if `storage_res` returns false we should handle it (depends on the previous implementation)
+        if not storage_res:
+             raise HTTPException(status_code=503, detail=f"Error al subir: {error_msg}")
+
+        public_pdf_url = storage_service.get_public_url(file_path)
+
+        # Database strict saving
+        new_cert = VaccinationCertificate(
+            mascota_nombre=patient.name,
+            mascota_especie=patient.species or "N/A",
+            dueno_nombre=nombre_due,
+            veterinario_id=vet_profile.id,
+            vacunas_json=vacunas_json,
+            pdf_url=public_pdf_url or file_path,
+            hash_control=file_hash,
+            token_validacion=token_validacion
+        )
+        session.add(new_cert)
+        await session.flush()
+
+        integrity_record = CertificateIntegrityRecord(
+            certificado_id=new_cert.id,
+            hash_pdf=file_hash,
+            verificado=True
+        )
+        session.add(integrity_record)
+        
+        await session.commit()
+        return {
+            "status": "success", 
+            "message": "Certificado avanzado generado.", 
+            "token": token_validacion,
+            "pdf_url": public_pdf_url,
+            "hash": file_hash
+        }
 
 @router.get("/download/{cert_hash}")
 async def download_certificate(cert_hash: str, username: str = Depends(admin_required)):

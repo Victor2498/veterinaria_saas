@@ -770,9 +770,9 @@
                         <input type="number" step="0.1" id="editPatHeight">
                     </div>
                 </div>
-                <div style="margin-top: 1.5rem;">
-                    <button class="btn" style="width: 100%;" onclick="savePatientEdit()">Guardar Cambios
-                        Principales</button>
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                    <button class="btn" style="flex: 1;" onclick="savePatientEdit()">Guardar Cambios Principales</button>
+                    <button class="btn" style="flex: 1; background: var(--success);" onclick="window.open('/mascota/' + document.getElementById('editPatId').value, '_blank')">🌐 Ver Pasaporte Digital</button>
                 </div>
             </div>
 
@@ -1039,7 +1039,8 @@
                     <td>${v.date}</td>
                     <td><span class="badge" style="background:var(--sidebar-hover); color:var(--primary);">${v.next_dose}</span></td>
                     <td style="text-align:right;">
-                        <button onclick="editVaccination(${v.id}, '${v.vaccine_name}', '${v.next_dose}')" style="background:none; border:none; cursor:pointer;">✏️</button>
+                        <button onclick="editVaccination(${v.id}, '${v.vaccine_name}', '${v.next_dose}')" style="background:none; border:none; cursor:pointer;" title="Editar">✏️</button>
+                        <button onclick="emitAdvancedCertificate(${v.id})" style="background:var(--success); color:white; border:none; cursor:pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;" title="Generar PDF Oficial (Inmutable)">📄 Emitir</button>
                     </td>
                 `;
                 vaccineList.appendChild(row);
@@ -1428,6 +1429,26 @@
             } catch (e) {
                 console.error(e);
                 alert("Error de conexión");
+            }
+        }
+        
+        async function emitAdvancedCertificate(vaccinationId) {
+            if (!confirm("¿Generar Certificado Oficial Avanzado para esta vacuna?")) return;
+            try {
+                const res = await fetch(`/admin/certificates/emit_advanced/${vaccinationId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (confirm("✅ Certificado Inmutable Generado.\n¿Desea ver el documento PDF ahora?")) {
+                        window.open(data.pdf_url, '_blank');
+                    }
+                    // Refresh patient
+                    openEditPatientModal(document.getElementById('editPatId').value);
+                } else {
+                    alert(data.detail || "Error generando certificado.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión emitiendo certificado.");
             }
         }
     </script>
