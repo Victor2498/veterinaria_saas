@@ -427,7 +427,8 @@
         <a href="#" class="nav-item" onclick="showSection('citas', this)">🗓️ Citas</a>
         <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
         <a href="#" class="nav-item" onclick="showSection('servicios', this)">🏷️ Servicios</a>
-        <a href="#" class="nav-item" onclick="showSection('atenciones', this)">🩺 Atenciones</a>
+        <a href="#" class="nav-item" onclick="showSection('atenciones', this)">Atenciones</a>
+        <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Mi Perfil</a>
         <a href="#" class="nav-item" onclick="showSection('caja', this)">💰 Caja</a>
 
         <div style="margin-top: auto;">
@@ -998,39 +999,40 @@
         }
 
         async function submitProfileUpdate() {
+            const fullName = document.getElementById('profFullName').value;
+            const license = document.getElementById('profLicense').value;
+            const signatureFile = document.getElementById('profSignature').files[0];
+
+            if (!fullName) return Swal.fire('Error', 'El nombre completo es obligatorio', 'error');
+
             const formData = new FormData();
-            formData.append('full_name', document.getElementById('profFullName').value);
-            formData.append('license_number', document.getElementById('profLicense').value);
-            
-            const fileInput = document.getElementById('profSignature');
-            if (fileInput.files.length > 0) {
-                formData.append('signature', fileInput.files[0]);
-            }
+            formData.append('full_name', fullName);
+            if (license) formData.append('license_number', license);
+            if (signatureFile) formData.append('signature', signatureFile);
 
             // Disable button during upload
             const btn = document.querySelector('button[onclick="submitProfileUpdate()"]');
-            const originalText = btn.innerText;
-            btn.innerText = "Subiendo...";
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ Guardando...";
             btn.disabled = true;
 
             try {
                 const res = await fetch('/admin/update_profile', {
                     method: 'POST',
-                    body: formData // No Content-Type header needed, fetch sets boundaries automatically for FormData
+                    body: formData
                 });
-
-                if (res.ok) {
-                    alert('¡Datos profesionales actualizados!');
-                    window.location.reload();
+                const data = await res.json();
+                if (data.status === 'success') {
+                    Swal.fire('¡Éxito!', 'Perfil profesional actualizado correctamente.', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    const data = await res.json();
-                    alert('Error: ' + (data.detail || 'Error al actualizar el perfil profesional.'));
+                    Swal.fire('Error', data.detail || 'No se pudo actualizar el perfil', 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert("Error de red.");
+                Swal.fire('Error', 'Error de conexión al guardar el perfil', 'error');
             } finally {
-                btn.innerText = originalText;
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
