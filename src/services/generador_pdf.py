@@ -15,9 +15,9 @@ class PDFCertificado(FPDF):
         self.set_text_color(240, 240, 240)  # Light grey
         # Save current state
         with self.local_context():
-            self.translate(10, 250)
-            self.rotate(45)
-            self.text(0, 0, self.watermark_text)
+            with self.rotation(45, 10, 250):
+                self.set_xy(10, 250)
+                self.cell(0, 0, self.watermark_text, align="C")
 
 def generar_certificado_vacunacion(
     nombre_veterinaria,
