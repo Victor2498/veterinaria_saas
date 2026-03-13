@@ -620,8 +620,8 @@ async def upload_firma(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error procesando la imagen: {e}")
             
-        # Storage
-        path = f"firmas/{user.org_id}/firma_{user.org_id}.png"
+        # Storage - Use user.id for signatures to avoid overwrites
+        path = f"firmas/u_{user.id}/firma_{uuid.uuid4().hex[:8]}.png"
         from src.services.storage import storage_service
         res, err = storage_service.upload_file(processed_bytes, path, "image/png")
         if err:
@@ -629,11 +629,8 @@ async def upload_firma(
             
         public_url = storage_service.get_public_url(path)
         
-        # Update Org
-        org_res = await session.execute(select(Organization).where(Organization.id == user.org_id))
-        org = org_res.scalar()
-        if org and public_url:
-            org.firma_png_url = public_url
+        # Update User Signature (instead of Org) - Consistent with Profile View
+        user.signature_img = public_url
             
         await session.commit()
         return {"status": "success", "url": public_url}
@@ -661,7 +658,8 @@ async def upload_sello(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error procesando la imagen: {e}")
             
-        path = f"sellos/{user.org_id}/sello_{user.org_id}.png"
+        # Storage - Use uuid for stamps to avoid cache issues
+        path = f"sellos/{user.org_id}/sello_{uuid.uuid4().hex[:8]}.png"
         from src.services.storage import storage_service
         res, err = storage_service.upload_file(processed_bytes, path, "image/png")
         if err:

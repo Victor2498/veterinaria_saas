@@ -725,7 +725,7 @@
                             
                             {% if user.signature_img %}
                             <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
-                                <img src="{{ user.signature_img }}" alt="Firma Actual" style="max-height: 100px; max-width: 100%;">
+                                <img src="{{ user.signature_img }}?t={{ range(1, 1000000) | random }}" alt="Firma Actual" style="max-height: 100px; max-width: 100%;">
                             </div>
                             {% else %}
                             <div style="background: var(--card); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 2px dashed var(--border); color: var(--text-dim); height: 120px; display: flex; align-items: center; justify-content: center;">
@@ -742,7 +742,7 @@
                             
                             {% if org.sello_png_url %}
                             <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
-                                <img src="{{ org.sello_png_url }}" alt="Sello Actual" style="max-height: 100px; max-width: 100%;">
+                                <img src="{{ org.sello_png_url }}?t={{ range(1, 1000000) | random }}" alt="Sello Actual" style="max-height: 100px; max-width: 100%;">
                             </div>
                             {% else %}
                             <div style="background: var(--card); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 2px dashed var(--border); color: var(--text-dim); height: 120px; display: flex; align-items: center; justify-content: center;">
