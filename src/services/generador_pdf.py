@@ -12,12 +12,18 @@ class PDFCertificado(FPDF):
     def header(self):
         # We handle watermark here
         self.set_font("Helvetica", "B", 50)
-        self.set_text_color(240, 240, 240)  # Light grey
-        # Save current state
+        self.set_text_color(245, 245, 245)  # Very light grey
         with self.local_context():
             with self.rotation(45, 10, 250):
                 self.set_xy(10, 250)
                 self.cell(0, 0, self.watermark_text, align="C")
+
+    def footer(self):
+        # Footer with officiality notice
+        self.set_y(-15)
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(150, 150, 150)
+        self.cell(0, 10, f"Documento oficial generado el {datetime.now().strftime('%d/%m/%Y %H:%M')} - ID Único de Verificación", align='C')
 
 def generar_certificado_vacunacion(
     nombre_veterinaria,
@@ -28,107 +34,149 @@ def generar_certificado_vacunacion(
     veterinario_matricula,
     vacunas_json,
     token_validacion,
-    base_url="https://ejemplo.com", # Needs to be updated or passed dynamically
+    base_url="https://ejemplo.com",
     firma_sello_url=None
 ):
     """
-    Generates a PDF certificate using fpdf2 and segno.
-    Returns the PDF bytes and its SHA256 hash.
+    Generates a professional PDF certificate using fpdf2 and segno.
     """
     pdf = PDFCertificado(watermark_text=nombre_veterinaria.upper())
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # CABECERA
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.set_text_color(46, 80, 119) # Dark blue
+    # --- HEADER BANNER ---
+    pdf.set_fill_color(46, 80, 119)  # Dark Blue
+    pdf.rect(0, 0, 210, 40, 'F')
+    
+    pdf.set_y(12)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(255, 255, 255)
     pdf.cell(0, 10, nombre_veterinaria.upper(), ln=True, align='C')
     
-    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 5, "SISTEMA INTEGRAL DE GESTIÓN VETERINARIA", ln=True, align='C')
+
+    pdf.set_y(45)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_text_color(46, 80, 119)
+    pdf.cell(0, 10, "CERTIFICADO OFICIAL DE VACUNACIÓN", ln=True, align='C')
+    pdf.ln(5)
+
+    # --- INFO BLOCKS ---
+    y_start_info = pdf.get_y()
+    
+    # Block Style
+    pdf.set_draw_color(230, 230, 230)
+    pdf.set_fill_color(250, 250, 250)
+    pdf.rect(10, y_start_info, 190, 35, 'FD')
+    
+    pdf.set_xy(15, y_start_info + 5)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(40, 6, "DATOS DEL PACIENTE")
+    pdf.set_xy(105, y_start_info + 5)
+    pdf.cell(40, 6, "DATOS DEL TUTOR")
+    
+    pdf.ln(8)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "CERTIFICADO DIGITAL DE VACUNACIÓN", ln=True, align='C')
     
-    pdf.line(10, pdf.get_y()+2, 200, pdf.get_y()+2)
-    pdf.ln(10)
+    # Patient Data
+    pdf.set_x(15)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(20, 6, "Nombre: ", ln=False)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(60, 6, mascota_nombre, ln=True)
+    
+    pdf.set_x(15)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(20, 6, "Especie: ", ln=False)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(60, 6, mascota_especie, ln=True)
+    
+    # Owner Data (Positioned absolute to align with patient)
+    pdf.set_xy(105, y_start_info + 13)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(20, 6, "Nombre: ", ln=False)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(60, 6, dueno_nombre, ln=True)
 
-    # DATOS MASCOTA
+    pdf.set_xy(10, y_start_info + 45)
+
+    # --- VACCINATION TABLE ---
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Datos del Paciente:", ln=True)
-    pdf.set_font("Helvetica", "", 12)
-    
-    pdf.cell(50, 8, "Nombre:", ln=False)
-    pdf.cell(0, 8, mascota_nombre, ln=True)
-    
-    pdf.cell(50, 8, "Especie:", ln=False)
-    pdf.cell(0, 8, mascota_especie, ln=True)
-    
-    pdf.cell(50, 8, "Dueño/Tutor:", ln=False)
-    pdf.cell(0, 8, dueno_nombre, ln=True)
-
-    pdf.ln(10)
-
-    # TABLA VACUNAS
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Historial de Vacunación Registrado:", ln=True)
+    pdf.set_text_color(46, 80, 119)
+    pdf.cell(0, 8, "DETALLE DE INMUNIZACIONES APLICADAS", ln=True)
     pdf.ln(2)
 
-    # Headers
-    pdf.set_fill_color(220, 220, 220)
+    # Table Headers
+    pdf.set_fill_color(46, 80, 119)
+    pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(30, 8, "Fecha", border=1, fill=True, align='C')
-    pdf.cell(70, 8, "Vacuna", border=1, fill=True, align='C')
-    pdf.cell(40, 8, "Lote", border=1, fill=True, align='C')
-    pdf.cell(50, 8, "Próxima Dosis", border=1, fill=True, align='C', ln=True)
+    pdf.cell(35, 10, " Fecha", border=0, fill=True, align='L')
+    pdf.cell(75, 10, " Vacuna / Biológico", border=0, fill=True, align='L')
+    pdf.cell(40, 10, " Lote No.", border=0, fill=True, align='L')
+    pdf.cell(40, 10, " Próxima Dosis", border=0, fill=True, align='L', ln=True)
 
+    # Table Body with Zebra Stripes
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "", 10)
+    fill = False
     for vac in vacunas_json:
-        pdf.cell(30, 8, vac.get("fecha", "-"), border=1, align='C')
-        pdf.cell(70, 8, vac.get("nombre", "-"), border=1, align='C')
-        pdf.cell(40, 8, vac.get("lote", "-"), border=1, align='C')
-        pdf.cell(50, 8, vac.get("proxima", "-"), border=1, align='C', ln=True)
+        pdf.set_fill_color(245, 247, 250) if fill else pdf.set_fill_color(255, 255, 255)
+        pdf.cell(35, 9, f" {vac.get('fecha', '-')}", border='B', fill=True, align='L')
+        pdf.cell(75, 9, f" {vac.get('nombre', '-')}", border='B', fill=True, align='L')
+        pdf.cell(40, 9, f" {vac.get('lote', '-')}", border='B', fill=True, align='L')
+        pdf.cell(40, 9, f" {vac.get('proxima', '-')}", border='B', fill=True, align='L', ln=True)
+        fill = not fill
 
-    pdf.ln(15)
+    pdf.ln(10)
 
-    # SECCION PROFESIONAL
-    y_stamp = pdf.get_y()
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "Profesional Interviniente", ln=True)
-    pdf.set_font("Helvetica", "", 12)
-    pdf.cell(0, 8, f"Dr/a. {veterinario_nombre}", ln=True)
-    pdf.cell(0, 8, f"Matrícula: {veterinario_matricula}", ln=True)
-
-    if firma_sello_url:
-        # Nota: Idealmente firma_sello_url es un path local temporal o se descarga previamente 
-        # para pasarlo aquí si es una URL HTTPS que FPDF no pueda leer directamente.
-        # FPDF2 soporta URLs mediante urllib.
-        try:
-            # We place the stamp slightly to the right of the professional info
-            pdf.image(firma_sello_url, x=130, y=y_stamp, w=40)
-        except Exception as e:
-            print(f"Error cargando el sello: {e}")
-
-    # GENERACIÓN DE QR con segno
-    # validation URL
+    # --- PROFESSIONAL SECTION & QR ---
+    y_footer = pdf.get_y()
+    
+    # QR Code on the left
     if not base_url.endswith("/"):
         base_url += "/"
     validacion_url = f"{base_url}validar/{token_validacion}"
     
     qr = segno.make(validacion_url)
     qr_buffer = io.BytesIO()
-    # Save QR as png
     qr.save(qr_buffer, kind='png', scale=4)
     
-    # We position the QR at the bottom right
-    pdf.set_y(-50)
-    pdf.image(qr_buffer, x=160, w=30)
+    # Box for QR & Validation
+    pdf.set_fill_color(250, 250, 250)
+    pdf.rect(10, y_footer, 80, 45, 'F')
+    pdf.image(qr_buffer, x=12, y=y_footer + 5, w=25)
     
-    pdf.set_font("Helvetica", "I", 8)
-    pdf.set_xy(150, -18)
-    pdf.cell(50, 4, "Escanee para validar autenticidad", align='C')
+    pdf.set_xy(40, y_footer + 8)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.cell(45, 4, "VALIDACIÓN DIGITAL", ln=True)
+    pdf.set_x(40)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.multi_cell(45, 3, "Este documento cuenta con firma electrónica y es verificable escaneando el código QR o ingresando el token en el portal oficial.")
     
-    # OUTPUT AND HASH
+    # Signature/Stamp on the right
+    if firma_sello_url:
+        try:
+            pdf.image(firma_sello_url, x=135, y=y_footer, w=50)
+        except Exception as e:
+            print(f"Error cargando el sello: {e}")
+            
+    pdf.set_xy(120, y_footer + 35)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(80, 5, f"Dr/a. {veterinario_nombre}", ln=True, align='C')
+    pdf.set_x(120)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.cell(80, 5, f"Matrícula: {veterinario_matricula}", ln=True, align='C')
+
+    # Immuntability Hash at the very bottom
+    pdf.set_y(-25)
+    pdf.set_font("Courier", "", 7)
+    pdf.set_text_color(180, 180, 180)
     pdf_bytes_array = pdf.output(dest='S')
     pdf_bytes = bytes(pdf_bytes_array)
-    
     hash_sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+    
+    pdf.cell(0, 4, f"HASH DE INTEGRIDAD: {hash_sha256}", align='C')
 
     return pdf_bytes, hash_sha256
