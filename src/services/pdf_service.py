@@ -223,43 +223,40 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         qr_img = Image(qr_buffer, width=1.5*inch, height=1.5*inch)
         
-        # QR Layout
-        qr_data = [[qr_img, Paragraph(f"<b>VERIFICACIÓN ONLINE</b><br/>Escanee este código para verificar la autenticidad de este certificado.<br/><font size=8>{verify_url}</font>", styles['Normal'])]]
-        qr_table = Table(qr_data, colWidths=[2*inch, 4.5*inch])
-        qr_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (0,0), (0,0), 'CENTER'),
-        ]))
-        elements.append(qr_table)
+        # Footer with QR and Signature in parallel
+        legend_style = ParagraphStyle('LegendStyle', parent=styles['Normal'], fontSize=7, leading=8, textColor=colors.grey)
+        legend_text = Paragraph(f"<b>VERIFICACIÓN ONLINE</b><br/>Escanee para verificar autenticidad.<br/>{verify_url}", legend_style)
         
-        # --- Signature and Stamp Section (Right Side) ---
-        if signature_url or vet_name:
-            elements.append(Spacer(1, 20))
-            
-            sig_elements = []
-            if signature_url:
-                try:
-                    # Download image for ReportLab
-                    response = requests.get(signature_url)
-                    if response.status_code == 200:
-                        img_data = io.BytesIO(response.content)
-                        sig_img = Image(img_data, width=2.0*inch, height=1.0*inch)
-                        sig_elements.append(sig_img)
-                except Exception as e:
-                    print(f"Error loading signature image: {e}")
-            
-            sig_elements.append(Paragraph(f"<b>Dr/a. {vet_name or 'Profesional'}</b>", styles['Normal']))
-            if vet_license:
-                sig_elements.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", styles['Normal']))
-            
-            # Combine in a table for alignment
-            sig_box = [[Spacer(1,1), sig_elements]]
-            t_sig = Table(sig_box, colWidths=[4.5*inch, 2.0*inch])
-            t_sig.setStyle(TableStyle([
-                ('ALIGN', (1,0), (1,0), 'CENTER'),
-                ('VALIGN', (1,0), (1,0), 'BOTTOM'),
-            ]))
-            elements.append(t_sig)
+        qr_col = [qr_img, Spacer(1, 5), legend_text]
+        
+        # --- Signature and Stamp Section ---
+        sig_col = []
+        if signature_url:
+            try:
+                response = requests.get(signature_url)
+                if response.status_code == 200:
+                    img_data = io.BytesIO(response.content)
+                    sig_img = Image(img_data, width=1.8*inch, height=0.9*inch)
+                    sig_col.append(sig_img)
+            except Exception as e:
+                print(f"Error loading signature image: {e}")
+        
+        sig_col.append(Paragraph(f"<b>Dr/a. {vet_name or 'Profesional'}</b>", styles['Normal']))
+        if vet_license:
+            sig_col.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", styles['Normal']))
+        
+        # Main Footer Table: [QR + Legend] | [Signature + Info]
+        footer_data = [[qr_col, sig_col]]
+        footer_table = Table(footer_data, colWidths=[3.25*inch, 3.25*inch])
+        footer_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (0,0), (0,0), 'LEFT'),
+            ('ALIGN', (1,0), (1,0), 'CENTER'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
+        
+        elements.append(footer_table)
 
     else:
         elements.append(Paragraph("<i>Este documento es un registro oficial de la clínica. Los sellos y firmas físicos validan la aplicación de cada dosis.</i>", styles['Normal']))

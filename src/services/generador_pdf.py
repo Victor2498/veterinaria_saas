@@ -135,40 +135,50 @@ def generar_certificado_vacunacion(
     # --- PROFESSIONAL SECTION & QR ---
     y_footer = pdf.get_y()
     
+    # Ensure footer starts on a fresh page if we're too close to bottom
+    if y_footer > 230:
+        pdf.add_page()
+        y_footer = pdf.get_y()
+        
     # QR Code on the left
     if not base_url.endswith("/"):
         base_url += "/"
-    validacion_url = f"{base_url}validar/{token_validacion}"
+    validacion_url = f"{base_url}verify/{token_validacion}"
     
     qr = segno.make(validacion_url)
     qr_buffer = io.BytesIO()
     qr.save(qr_buffer, kind='png', scale=4)
     
-    # Box for QR & Validation
-    pdf.set_fill_color(250, 250, 250)
-    pdf.rect(10, y_footer, 80, 45, 'F')
-    pdf.image(qr_buffer, x=12, y=y_footer + 5, w=25)
+    # Base positioning for QR and Signature
+    qr_x = 20
+    sig_x = 120
     
-    pdf.set_xy(40, y_footer + 8)
-    pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(45, 4, "VALIDACIÓN DIGITAL", ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Helvetica", "", 7)
-    pdf.multi_cell(45, 3, "Este documento cuenta con firma electrónica y es verificable escaneando el código QR o ingresando el token en el portal oficial.")
+    # Position QR
+    pdf.image(qr_buffer, x=qr_x, y=y_footer, w=30)
     
-    # Signature/Stamp on the right
+    # Position Legend BELOW QR
+    pdf.set_xy(qr_x - 5, y_footer + 32)
+    pdf.set_font("Helvetica", "B", 7)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(40, 4, "VERIFICACIÓN ONLINE", ln=True, align='C')
+    pdf.set_x(qr_x - 5)
+    pdf.set_font("Helvetica", "", 6)
+    pdf.multi_cell(40, 3, f"Escanee para verificar autenticidad.\n{validacion_url}", align='C')
+    
+    # Signature/Stamp on the right (parallel to QR)
     if firma_sello_url:
         try:
-            pdf.image(firma_sello_url, x=135, y=y_footer, w=50)
+            pdf.image(firma_sello_url, x=sig_x + 10, y=y_footer - 5, w=50)
         except Exception as e:
             print(f"Error cargando el sello: {e}")
             
-    pdf.set_xy(120, y_footer + 35)
+    pdf.set_xy(sig_x, y_footer + 32)
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(80, 5, f"Dr/a. {veterinario_nombre}", ln=True, align='C')
-    pdf.set_x(120)
+    pdf.cell(70, 5, f"Dr/a. {veterinario_nombre}", ln=True, align='C')
+    pdf.set_x(sig_x)
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(80, 5, f"Matrícula: {veterinario_matricula}", ln=True, align='C')
+    pdf.cell(70, 5, f"Matrícula: {veterinario_matricula}", ln=True, align='C')
 
     # Immuntability Hash at the very bottom
     pdf.set_y(-25)
