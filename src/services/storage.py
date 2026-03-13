@@ -21,7 +21,7 @@ class StorageService:
             res = self.supabase.storage.from_(self.bucket_name).upload(
                 file=file_bytes,
                 path=path,
-                file_options={"content-type": content_type, "upsert": True}
+                file_options={"content-type": content_type, "upsert": "true"}
             )
             return res, None
         except Exception as e:
