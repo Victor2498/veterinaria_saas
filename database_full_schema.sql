@@ -5,7 +5,7 @@ CREATE TABLE organizations (
 	is_active BOOLEAN, 
 	evolution_api_url VARCHAR, 
 	evolution_api_key VARCHAR, 
-	evolution_api_instance VARCHAR, 
+	evolution_instance VARCHAR, 
 	openai_api_key VARCHAR, 
 	plan_type VARCHAR, 
 	google_calendar_id VARCHAR, 
@@ -65,13 +65,13 @@ CREATE TABLE services (
 	FOREIGN KEY(org_id) REFERENCES organizations (id)
 );
 
-CREATE INDEX ix_services_category ON services (category);
-
 CREATE INDEX ix_services_id ON services (id);
 
 CREATE INDEX ix_services_org_id ON services (org_id);
 
 CREATE INDEX ix_services_name ON services (name);
+
+CREATE INDEX ix_services_category ON services (category);
 
 CREATE TABLE owners (
 	id SERIAL NOT NULL, 

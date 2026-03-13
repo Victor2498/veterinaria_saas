@@ -39,6 +39,9 @@ erDiagram
         string slug
         boolean is_active
         string evolution_api_url
+        string evolution_api_key
+        string evolution_instance
+        string openai_api_key
         string plan_type
         string firma_png_url
         string sello_png_url

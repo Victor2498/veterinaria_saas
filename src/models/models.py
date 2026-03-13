@@ -14,7 +14,7 @@ class Organization(Base):
     # SaaS Config per Org
     evolution_api_url = Column(String, nullable=True)
     evolution_api_key = Column(String, nullable=True)
-    evolution_api_instance = Column(String, nullable=True)
+    evolution_instance = Column(String, nullable=True)
     openai_api_key = Column(String, nullable=True)
     plan_type = Column(String, default="basic") # lite, basic, pro
     google_calendar_id = Column(String, nullable=True)
