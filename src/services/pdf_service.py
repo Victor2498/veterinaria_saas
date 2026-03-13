@@ -91,19 +91,60 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     primary_color = org_colors.get("primary") or ("#D4AF37" if is_digital else "#E38E49")
     secondary_color = org_colors.get("secondary") or ("#FFF8DC" if is_digital else "#F9D5B1")
 
-    title = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_digital else "LIBRETA SANITARIA"
-    elements, styles = _get_base_elements(org_name, title, is_digital)
+    # Layout Pre-Calculation
+    qr_img = None
+    if is_digital and verify_url:
+        qr = qrcode.QRCode(box_size=4, border=1)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        qr_buffer = io.BytesIO()
+        img.save(qr_buffer, format="PNG")
+        qr_buffer.seek(0)
+        qr_img = Image(qr_buffer, width=1.1*inch, height=1.1*inch)
+
+    title_text = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_digital else "LIBRETA SANITARIA"
+    elements, styles = _get_base_elements(org_name, title_text, is_digital)
 
     if is_digital:
-        # Digital Watermark / Badge
-        elements.append(Paragraph("<b>DOCUMENTO OFICIAL VERIFICABLE</b>", ParagraphStyle('DigitalBadge', parent=styles['Normal'], textColor=colors.HexColor("#D4AF37"), alignment=1)))
-        elements.append(Spacer(1, 10))
+        # Re-arrange header into a table for the digital version
+        elements.pop() # Remove HR
+        elements.pop() # Remove Title
+        elements.pop() # Remove Org Name
+        
+        header_color = colors.HexColor(primary_color)
+        title_style = ParagraphStyle('CertTitle', parent=styles['Heading1'], fontSize=16, textColor=header_color, alignment=1)
+        patient_style = ParagraphStyle('PatientStyle', parent=styles['Normal'], fontSize=10, leading=12)
+        badge_style = ParagraphStyle('DigitalBadge', parent=styles['Normal'], fontSize=7, textColor=colors.grey, alignment=1)
 
-    elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
-    if is_digital and cert_hash:
-        elements.append(Paragraph(f"<font size=8 color=grey>ID Certificado: {cert_hash}</font>", styles['Normal']))
-    
-    elements.append(Spacer(1, 15))
+        patient_info = [
+            Paragraph(f"<b>PACIENTE:</b><br/>{patient_name.upper()}", patient_style),
+            Paragraph(f"<font size=8 color=grey>ID: {cert_hash}</font>", patient_style) if cert_hash else ""
+        ]
+        
+        qr_col = []
+        if qr_img:
+            qr_col.append(qr_img)
+            qr_col.append(Paragraph("DOCUMENTO OFICIAL<br/>VERIFICABLE", badge_style))
+        
+        # 3-Column Header Table
+        h_data = [[patient_info, Paragraph(title_text, title_style), qr_col]]
+        h_table = Table(h_data, colWidths=[2.2*inch, 2.6*inch, 1.7*inch])
+        h_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (0,0), (0,0), 'LEFT'),
+            ('ALIGN', (1,0), (1,0), 'CENTER'),
+            ('ALIGN', (2,0), (2,0), 'CENTER'),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        ]))
+        
+        elements.append(Paragraph(f"<b>{org_name.upper()}</b>", ParagraphStyle('OrgName', parent=styles['Normal'], fontSize=9, textColor=colors.grey, spaceAfter=8)))
+        elements.append(h_table)
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey, spaceBefore=4, spaceAfter=20))
+    else:
+        elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
+        elements.append(Spacer(1, 15))
 
     # Cache signature for table rows
     sig_bytes = None
@@ -248,62 +289,12 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
 
     elements.append(Spacer(1, 40))
     
-    # Digital QR Code Footer
-    if is_digital and verify_url:
-        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#D4AF37"), spaceBefore=10, spaceAfter=10))
-        
-        # Generate QR
-        qr = qrcode.QRCode(box_size=4, border=1)
-        qr.add_data(verify_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        qr_buffer = io.BytesIO()
-        img.save(qr_buffer, format="PNG")
-        qr_buffer.seek(0)
-        
-        qr_img = Image(qr_buffer, width=1.5*inch, height=1.5*inch)
-        
-        # Footer with QR and Signature in parallel
-        legend_style = ParagraphStyle('LegendStyle', parent=styles['Normal'], fontSize=7, leading=8, textColor=colors.grey)
-        legend_text = Paragraph(f"<b>VERIFICACIÓN ONLINE</b><br/>Escanee para verificar autenticidad.<br/>{verify_url}", legend_style)
-        
-        qr_col = [qr_img, Spacer(1, 5), legend_text]
-        
-        # Professional Info Paragraphs
-        centered_style = ParagraphStyle('CenteredStyle', parent=styles['Normal'], alignment=1) # TA_CENTER = 1
-        
-        # Professional block elements
-        sig_col = []
-        if sig_bytes:
-            try:
-                sig_img = Image(io.BytesIO(sig_bytes), width=1.8*inch, height=0.9*inch)
-                sig_img.hAlign = 'CENTER'
-                sig_col.append(sig_img)
-            except Exception as e:
-                print(f"Error loading signature image: {e}")
-        
-        # Fix redundancy: Check if name already starts with Dr. or Dra.
-        clean_name = vet_name or 'Profesional'
-        prof_prefix = "Dr/a. " if not (clean_name.strip().startswith("Dr.") or clean_name.strip().startswith("Dra.")) else ""
-        
-        sig_col.append(Paragraph(f"<b>{prof_prefix}{clean_name}</b>", centered_style))
-        if vet_license:
-            sig_col.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", centered_style))
-        
-        # Main Footer Table: [QR + Legend] | [Signature Block]
-        footer_data = [[qr_col, sig_col]]
-        footer_table = Table(footer_data, colWidths=[3.25*inch, 3.25*inch])
-        footer_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (0,0), (0,0), 'LEFT'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        
-        elements.append(footer_table)
-
+    # Digital Legend Footer (Minimalist)
+    if is_digital:
+        elements.append(Spacer(1, 20))
+        elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey, spaceBefore=10, spaceAfter=10))
+        footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], fontSize=7, textColor=colors.grey, alignment=1)
+        elements.append(Paragraph("Este documento es un registro oficial generado digitalmente. La autenticidad puede verificarse escaneando el código QR superior.", footer_style))
     else:
         elements.append(Paragraph("<i>Este documento es un registro oficial de la clínica. Los sellos y firmas físicos validan la aplicación de cada dosis.</i>", styles['Normal']))
     
