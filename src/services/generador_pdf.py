@@ -1,4 +1,5 @@
 import io
+import requests
 import hashlib
 from datetime import datetime
 from fpdf import FPDF
@@ -109,25 +110,43 @@ def generar_certificado_vacunacion(
     pdf.cell(0, 8, "DETALLE DE INMUNIZACIONES APLICADAS", ln=True)
     pdf.ln(2)
 
+    # Cache signature for rows
+    sig_bytes = None
+    if firma_sello_url:
+        try:
+            resp = requests.get(firma_sello_url)
+            if resp.status_code == 200:
+                sig_bytes = io.BytesIO(resp.content)
+        except: pass
+
     # Table Headers
     pdf.set_fill_color(46, 80, 119)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(35, 10, " Fecha", border=0, fill=True, align='L')
-    pdf.cell(75, 10, " Vacuna / Biológico", border=0, fill=True, align='L')
-    pdf.cell(40, 10, " Lote No.", border=0, fill=True, align='L')
-    pdf.cell(40, 10, " Próxima Dosis", border=0, fill=True, align='L', ln=True)
+    pdf.cell(25, 10, " Fecha", border=0, fill=True, align='L')
+    pdf.cell(60, 10, " Vacuna / Biológico", border=0, fill=True, align='L')
+    pdf.cell(35, 10, " Lote No.", border=0, fill=True, align='L')
+    pdf.cell(35, 10, " FIRMA VET.", border=0, fill=True, align='L')
+    pdf.cell(35, 10, " Próxima Dosis", border=0, fill=True, align='L', ln=True)
 
     # Table Body with Zebra Stripes
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Helvetica", "", 9)
     fill = False
     for vac in vacunas_json:
+        row_y = pdf.get_y()
         pdf.set_fill_color(245, 247, 250) if fill else pdf.set_fill_color(255, 255, 255)
-        pdf.cell(35, 9, f" {vac.get('fecha', '-')}", border='B', fill=True, align='L')
-        pdf.cell(75, 9, f" {vac.get('nombre', '-')}", border='B', fill=True, align='L')
-        pdf.cell(40, 9, f" {vac.get('lote', '-')}", border='B', fill=True, align='L')
-        pdf.cell(40, 9, f" {vac.get('proxima', '-')}", border='B', fill=True, align='L', ln=True)
+        
+        pdf.cell(25, 10, f" {vac.get('fecha', '-')}", border='B', fill=True, align='L')
+        pdf.cell(60, 10, f" {vac.get('nombre', '-')}", border='B', fill=True, align='L')
+        pdf.cell(35, 10, f" {vac.get('lote', '-')}", border='B', fill=True, align='L')
+        
+        # Space for signature
+        pdf.cell(35, 10, "", border='B', fill=True, align='L')
+        if sig_bytes:
+            pdf.image(sig_bytes, x=135, y=row_y + 1, h=8)
+            
+        pdf.cell(35, 10, f" {vac.get('proxima', '-')}", border='B', fill=True, align='L', ln=True)
         fill = not fill
 
     pdf.ln(10)

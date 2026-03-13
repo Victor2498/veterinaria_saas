@@ -100,6 +100,21 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     
     elements.append(Spacer(1, 15))
 
+    # Cache signature for table rows
+    sig_bytes = None
+    if signature_url:
+        try:
+            resp = requests.get(signature_url)
+            if resp.status_code == 200:
+                sig_bytes = resp.content
+        except:
+            pass
+
+    def get_row_signature():
+        if sig_bytes:
+            return Image(io.BytesIO(sig_bytes), width=0.6*inch, height=0.3*inch)
+        return ""
+
     # --- SECCIÓN 1: PLAN SANITARIO (VACUNAS) ---
     elements.append(Paragraph("<b>PLAN SANITARIO</b>", styles['Heading3']))
     
@@ -126,8 +141,9 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
-            # Para desparasitaciones, mantenemos formato simple por ahora
-            desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), ""])
+            # Firma en la fila de desparasitación
+            firma_row = get_row_signature() if is_digital else ""
+            desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), firma_row])
             has_desp = True
         else:
             if is_digital:
@@ -141,7 +157,10 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
                 elif v.is_signed:
                     signature_info = "Firmado Digitalmente"
                 
-                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, Paragraph(signature_info, styles['Normal']), prox])
+                # Use image if available, else text
+                firma_cell = get_row_signature() or Paragraph(signature_info, styles['Normal'])
+                
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, firma_cell, prox])
             else:
                 # Basic Row
                 vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), "", prox])
