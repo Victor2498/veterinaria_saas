@@ -1,22 +1,162 @@
-# Documentación Técnica - Veterinaria SaaS
+# Documentación Técnica y Arquitectura del Sistema: Veterinaria SaaS
 
-Esta documentación resume los hallazgos técnicos y las implementaciones del módulo base.
+Este documento engloba los aspectos críticos de la arquitectura, seguridad, diagrama de entidad relación (ERD), y las mejoras de performance implementadas en la versión de producción del sistema de Veterinaria SaaS.
 
-## 1. Arquitectura Central
-- **Backend:** Desarrollado con **FastAPI**, lo que garantiza alta simultaneidad y soporte estricto de tipado a lo largo del ruteador de la API REST.
-- **ORM / Persistencia:** Implementado mediante **SQLAlchemy** sobre una base de datos **PostgreSQL**. Las migraciones se administran programáticamente.
-- **Caché y Mensajería:** Utiliza **Redis** de manera extensiva para cachear configuraciones pesadas (por ejemplo: URLs de webhooks o llaves de OpenAI) limitando los hits hacia la DB.
+## 1. Stack Tecnológico
 
-## 2. Autenticación y Seguridad
-- **JWT (JSON Web Tokens):** Las sesiones, tanto de super-administradores como de organizaciones, se basan en JWT almacenado en cookies firmadas HttpOnly para máxima seguridad en el frontend.
-- **Autorización por Niveles:** El sistema está protegido por Middlewares (`admin_required`, `superadmin_required`). Se ha verificado que solo los administradores pueden invocar acciones de suscripciones (`finance.py` y `superadmin.py`).
-- **Resiliencia ante Inyecciones:** Todas las transacciones SQL críticas utilizan SQLAlchemy queries parametrizadas o mapeo con modelos definidos (`select()`). Aquellos scripts sin utilizar los drivers ORM puros han sido parchados en `init_db.py`.
+*   **Backend Framework:** FastAPI (Asíncrono).
+*   **Base de Datos Relacional:** PostgreSQL gestionado a través de Supabase.
+*   **ORM (Object-Relational Mapping):** SQLAlchemy 2.0 (patrón asíncrono con `AsyncSession`).
+*   **Almacenamiento (Storage):** Supabase Storage (Almacenamiento de Certificados PDF, imágenes de firmas y logotipos).
+*   **Generación de Documentos:** ReportLab / fpdf2 para la creación en tiempo real de Certificados de Vacunación PDF con trazabilidad inmutable mediante hashes SHA-256.
 
-## 3. Integración de Servicios (Servicios Capa 3)
-- **Evolution API (WhatsApp):** Los webhooks envían datos JSON decodificados a `webhook_processor.py`. El flujo es no bloqueante (`BackgroundTasks`) y la extracción multimedia fue robustecida para evadir loops fatales por errores (`try/except/continue`).
-- **OpenAI:** Generación dinámica de reportes clínicos y transcripción iterativa del chat.
-- **ReportLab (Generación de PDF):** Sistema avanzado de renderización PDF modular, preparado para emitir "Tickets de Pago" y "Libretas Sanitarias" que varían entre la suscripción estandar y la premium.
+## 2. Optimizaciones Críticas Implementadas
 
-## 4. Diagnóstico de Rendimiento (Evaluación Final)
-- Se erradicaron más de 20 dependencias innecesarias de toda la capa `src/api` aliviando la carga del hilo principal de CPython.
-- Las consultas `SQLAlchemy` a través de colecciones complejas (como historiales y pagos) se gestionan a través de `JOIN` para mitigar el problema frecuente N+1 de bases no normalizadas.
+### A) Resolución del Problema de Consultas N+1 (Base de Datos)
+Se implementó *Eager Loading* utilizando la instrucción `.options(selectinload(...))` proporcionada por SQLAlchemy en los siguientes servicios y enrutadores:
+1.  **Attentions (`attentions.py`):** Carga anticipada de la entidad `Patient` al obtener atenciones médicas activas. Reduce O(N) queries a solo 2, descargando drásticamente el uso de conexiones del Pool en la tabla concurrente de atenciones.
+2.  **SuperAdmin Panel (`superadmin.py`):** Carga pre-generada de `Organization` atada a los usuarios bajo listados en memoria global, omitiendo consultas repetitivas.
+3.  **Finance y Endpoints Complejos:** Refinando con sentencias `join` y extracciones tempranas (`scalars().all()`) para evitar el lazily-loading oculto al serializar los reportes financieros.
+
+### B) Securización de Interfaces de Red y SSRF mitigations
+A través del análisis del linteador de seguridad *Bandit*, se parcharon peticiones HTTP Inseguras (`requests.get`) que actuaban sobre Storage remotos sin temporizadores (timeouts).
+Se impone categóricamente `timeout=10` en los generadores de PDF (`pdf_service` y `generador_pdf`), garantizando que la aplicación evite agotar los "workers" ante caídas del Storage de Supabase.
+
+### C) Prevención de Inyección SQL
+Toda la suite de la base de datos aprovecha `sqlalchemy.select` y `.where`, los cuales nativamente parametrizan y sanean (bind params) las entradas de los usuarios, previniendo por completo cualquier inyección SQL tipo *1=1*. No existe ni un comando F-String inyectado a sesiones crudas.
+
+---
+
+## 3. Diagrama Entidad-Relación (ERD)
+
+A continuación se detalla la estructura principal de la base de datos de producción mapeada directamente mediante herramientas de inferencia del Schema (PostgreSQL Meta).
+
+```mermaid
+erDiagram
+    ORGANIZATIONS {
+        int id PK
+        string name
+        string slug
+        boolean is_active
+        string evolution_api_url
+        string plan_type
+        string firma_png_url
+        string sello_png_url
+    }
+
+    USERS {
+        int id PK
+        string username
+        string password_hash
+        int org_id FK
+        boolean is_admin
+        boolean is_superadmin
+        string full_name
+        string license_number
+        string signature_img
+    }
+
+    OWNERS {
+        int id PK
+        int org_id FK
+        string phone_number
+        string name
+    }
+
+    PATIENTS {
+        int id PK
+        int org_id FK
+        string name
+        string species
+        int owner_id FK
+        string sex
+        string breed
+    }
+
+    MEDICAL_ATTENTIONS {
+        int id PK
+        int org_id FK
+        int patient_id FK
+        int vet_id FK
+        string status
+        string notes
+    }
+
+    TICKETS {
+        int id PK
+        int attention_id FK
+        int org_id FK
+        string ticket_number
+        float total_amount
+        string payment_status
+    }
+
+    TICKET_ITEMS {
+        int id PK
+        int ticket_id FK
+        string description
+        float unit_price
+        int quantity
+    }
+
+    PERFILES_VETERINARIOS {
+        int id PK
+        string nombre_completo
+        string matricula_profesional
+        string firma_sello_url
+    }
+
+    CERTIFICADOS_VACUNACION {
+        int id PK
+        string mascota_nombre
+        string pdf_url
+        string hash_control
+        int veterinario_id FK
+    }
+
+    VACCINATIONS {
+        int id PK
+        int org_id FK
+        int patient_id FK
+        string vaccine_name
+        string batch_number
+        boolean is_signed
+    }
+
+    DIGITAL_CERTIFICATES {
+        int id PK
+        int org_id FK
+        int patient_id FK
+        string file_hash
+        string storage_path
+        boolean is_valid
+    }
+
+    APPOINTMENTS {
+        int id PK
+        int org_id FK
+        int owner_id FK
+        string pet_name
+        string status
+    }
+
+    ORGANIZATIONS ||--o{ USERS : "emplea"
+    ORGANIZATIONS ||--o{ PATIENTS : "alberga"
+    ORGANIZATIONS ||--o{ OWNERS : "atiende"
+    ORGANIZATIONS ||--o{ VACCINATIONS : "registra"
+    
+    OWNERS ||--o{ PATIENTS : "posee"
+    USERS ||--o{ MEDICAL_ATTENTIONS : "atiende"
+    PATIENTS ||--o{ MEDICAL_ATTENTIONS : "recibe"
+    PATIENTS ||--o{ VACCINATIONS : "inmuniza"
+    
+    MEDICAL_ATTENTIONS ||--o{ TICKETS : "factura"
+    TICKETS ||--o{ TICKET_ITEMS : "contiene"
+    
+    PERFILES_VETERINARIOS ||--o{ CERTIFICADOS_VACUNACION : "firma"
+    PATIENTS ||--o{ DIGITAL_CERTIFICATES : "archiva"
+```
+
+---
+
+*Documento y métricas generadas estáticamente en el proceso de consolidación de lanzamiento (Auditoría V1).*

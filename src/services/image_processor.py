@@ -1,5 +1,5 @@
 import io
-from PIL import Image, ImageChops
+from PIL import Image
 
 def process_transparency(image_bytes: bytes, threshold: int = 220, intensity_gain: float = 1.5) -> bytes:
     """

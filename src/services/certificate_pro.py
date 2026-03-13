@@ -1,7 +1,7 @@
 import io
 import hashlib
 import requests
-from datetime import datetime
+
 from fpdf import FPDF
 import segno
 from .image_processor import process_transparency

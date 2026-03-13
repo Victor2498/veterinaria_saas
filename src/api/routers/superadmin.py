@@ -5,6 +5,7 @@ from src.core.database import AsyncSessionLocal
 from src.core.security import admin_required, get_password_hash
 from src.models.models import User, Organization
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 import re
 
 router = APIRouter(prefix="/superadmin", dependencies=[Depends(admin_required)])
@@ -87,19 +88,19 @@ async def superadmin_panel(request: Request, username: str = Depends(superadmin_
         # Fetch all users with their org names
 
         users_res = await session.execute(
-            select(User, Organization.name)
-            .outerjoin(Organization, User.org_id == Organization.id)
+            select(User)
+            .options(selectinload(User.organization))
             .order_by(User.id)
         )
-        users = users_res.all()
+        users = users_res.scalars().all()
         
         users_data = []
-        for user_obj, org_name in users:
+        for user_obj in users:
             users_data.append({
                 "id": user_obj.id,
                 "username": user_obj.username,
                 "is_superadmin": user_obj.is_superadmin,
-                "org_name": org_name or "N/A (SuperAdmin)"
+                "org_name": user_obj.organization.name if user_obj.organization else "N/A (SuperAdmin)"
             })
             
         return templates.TemplateResponse("superadmin.html", {

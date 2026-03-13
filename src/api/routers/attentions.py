@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 
 from datetime import datetime
 from src.core.database import AsyncSessionLocal
@@ -57,6 +58,7 @@ async def get_active_attentions(username: str = Depends(admin_required)):
         res = await session.execute(
             select(MedicalAttention, Patient)
             .join(Patient, MedicalAttention.patient_id == Patient.id)
+            .options(selectinload(MedicalAttention.patient))
             .where(MedicalAttention.org_id == org.id, MedicalAttention.status != 'finished')
             .order_by(desc(MedicalAttention.start_date))
         )

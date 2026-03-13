@@ -114,7 +114,7 @@ def generar_certificado_vacunacion(
     sig_bytes = None
     if firma_sello_url:
         try:
-            resp = requests.get(firma_sello_url)
+            resp = requests.get(firma_sello_url, timeout=10)
             if resp.status_code == 200:
                 sig_bytes = io.BytesIO(resp.content)
         except: pass

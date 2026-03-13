@@ -7,7 +7,7 @@ from datetime import datetime
 import io
 import qrcode
 import requests
-from reportlab.lib.utils import ImageReader
+
 
 def _get_base_elements(org_name, title, is_digital=False):
     """Helper to create professional header for all PDFs."""
@@ -108,7 +108,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     sig_bytes = None
     if signature_url:
         try:
-            resp = requests.get(signature_url)
+            resp = requests.get(signature_url, timeout=10)
             if resp.status_code == 200:
                 sig_bytes = resp.content
         except:
@@ -117,7 +117,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     firma_bytes = None
     if firma_org_url:
         try:
-            resp = requests.get(firma_org_url)
+            resp = requests.get(firma_org_url, timeout=10)
             if resp.status_code == 200:
                 firma_bytes = resp.content
         except: pass
