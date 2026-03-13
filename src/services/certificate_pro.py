@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 from fpdf import FPDF
 import segno
-from .image_processor import process_transparency, extract_signature_only
+from .image_processor import process_transparency
 
 class CertificatePro(FPDF):
     def __init__(self, watermark_text="VETERINARIA EXPRESS"):
@@ -98,36 +98,25 @@ def generate_pro_certificate(data):
     
     # Cache firma
     firma_url = data.get("urls", {}).get("firma")
-    # We'll keep two versions: the full processed image (for footer) and signature-only (for rows)
-    firma_full_bytes = None
-    firma_only_bytes = None
-    
+    firma_bytes = None
     if firma_url:
         try:
-            temp_bytes = None
             if firma_url.startswith(("http://", "https://")):
                 resp = requests.get(firma_url, timeout=5)
                 if resp.status_code == 200:
-                    temp_bytes = resp.content
+                    firma_bytes = io.BytesIO(resp.content)
             else:
                 # Local path
                 with open(firma_url, "rb") as f:
-                    temp_bytes = f.read()
+                    firma_bytes = io.BytesIO(f.read())
             
-            if temp_bytes:
-                # 1. Process transparency for the whole image
-                transparent_bytes = process_transparency(temp_bytes)
-                firma_full_bytes = io.BytesIO(transparent_bytes)
-                
-                # 2. Extract ONLY signature for the rows
-                only_sig = extract_signature_only(transparent_bytes)
-                firma_only_bytes = io.BytesIO(only_sig)
+            # Apply transparency processing
+            if firma_bytes:
+                processed_bytes = process_transparency(firma_bytes.getvalue())
+                firma_bytes = io.BytesIO(processed_bytes)
                 
         except Exception as e:
             print(f"DEBUG: Error loading/processing firma: {e}")
-
-    # Use firma_only_bytes for table rows
-    firma_bytes = firma_only_bytes 
 
     fill = False
     vacunas = data.get("vacunas", [])
@@ -144,7 +133,8 @@ def generate_pro_certificate(data):
         pdf.cell(col_widths[3], 12, "", border='B', fill=True)
         if firma_bytes:
             # Center firma in cell
-            # X position is after first 3 columns: 15 + 25 + 60 + 30 = 130
+            # X position is after first 3 columns: 15 (margin) + 25 + 60 + 30 = 130
+            firma_bytes.seek(0)
             pdf.image(firma_bytes, x=130 + (col_widths[3]-20)/2, y=current_y + 2, w=20)
             
         pdf.cell(col_widths[4], 12, vac.get("proxima", "-"), border='B', fill=True, align='C')
@@ -188,7 +178,8 @@ def generate_pro_certificate(data):
         # Firma Cell
         pdf.cell(desp_col_widths[3], 12, "", border='B', fill=True)
         if firma_bytes:
-            # X position: 15 + 30 + 30 + 80 = 155
+            # X position: 15 (margin) + 30 + 30 + 80 = 155
+            firma_bytes.seek(0)
             pdf.image(firma_bytes, x=155 + (desp_col_widths[3]-20)/2, y=current_y + 2, w=20)
             
         pdf.ln()
@@ -223,44 +214,42 @@ def generate_pro_certificate(data):
     pdf.cell(35, 3, "Escanee para verificar autenticidad", align='L')
 
     # Sello Profesional (Right)
-    # Using firma_full_bytes (which contains the user-provided composite image) 
-    # as the official block next to QR
-    sello_x = 150
-    sello_y = qr_y - 2 
-    sello_w = 40
-    
-    # Sello Profesional (Right)
-    # Using firma_full_bytes (which contains the user-provided composite image) 
-    # as the official block next to QR
-    sello_x = 150
-    sello_y = qr_y - 2 
-    sello_w = 40
-    
-    if firma_full_bytes:
+    sello_url = data.get("urls", {}).get("sello")
+    sello_bytes = None
+    if sello_url:
         try:
-            firma_full_bytes.seek(0)
-            pdf.image(firma_full_bytes, x=sello_x, y=sello_y, w=sello_w)
-        except Exception as e:
-            print(f"DEBUG: Error rendering firma_full: {e}")
-    else:
-        # Fallback to separate sello if provided
-        temp_sello_url = data.get("urls", {}).get("sello")
-        if temp_sello_url:
-            try:
-                s_bytes = None
-                if temp_sello_url.startswith(("http://", "https://")):
-                    resp = requests.get(temp_sello_url, timeout=5)
-                    if resp.status_code == 200:
-                        s_bytes = resp.content
+            if sello_url.startswith(("http://", "https://")):
+                resp = requests.get(sello_url, timeout=5)
+                if resp.status_code == 200:
+                    sello_bytes = io.BytesIO(resp.content)
                 else:
-                    with open(temp_sello_url, "rb") as f:
-                        s_bytes = f.read()
+                    print(f"DEBUG: Sello URL returned {resp.status_code}")
+            else:
+                # Local path
+                with open(sello_url, "rb") as f:
+                    sello_bytes = io.BytesIO(f.read())
+            
+            # Apply transparency processing
+            if sello_bytes:
+                processed_bytes = process_transparency(sello_bytes.getvalue())
+                sello_bytes = io.BytesIO(processed_bytes)
                 
-                if s_bytes:
-                    s_proc = process_transparency(s_bytes)
-                    pdf.image(io.BytesIO(s_proc), x=sello_x, y=sello_y, w=sello_w)
-            except Exception as e:
-                print(f"DEBUG: Error fallback sello: {e}")
+        except Exception as e:
+            print(f"DEBUG: Error downloading/loading/processing sello: {e}")
+
+    # Positioning Sello
+    sello_x = 150
+    sello_y = qr_y - 2 
+    sello_w = 40
+    
+    if sello_bytes:
+        pdf.image(sello_bytes, x=sello_x, y=sello_y, w=sello_w)
+        # Superimpose signature
+        if firma_bytes:
+            # Stamp signature on top of seal center
+            # Re-seek since it was used in tables
+            firma_bytes.seek(0)
+            pdf.image(firma_bytes, x=sello_x + 5, y=sello_y + 8, w=30)
             
     # Professional Info text below seal
     profesional = data.get("profesional", {})
