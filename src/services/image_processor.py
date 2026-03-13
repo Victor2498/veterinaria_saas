@@ -55,6 +55,57 @@ def process_transparency(image_bytes: bytes, threshold: int = 220, intensity_gai
         print(f"❌ Error avanzado de transparencia: {e}")
         return image_bytes
 
+def process_firma_sello(image_bytes: bytes) -> bytes:
+    """
+    Pipeline completo: 
+    1. Redimensiona si > 2000px
+    2. Quita fondo blanco (> 240) y convierte a transparencia gradualmente
+    3. Autorecortar bordes vacíos
+    4. Guardar como PNG optimizado.
+    """
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img = img.convert("RGBA")
+        
+        # 1. Normalización: redimensionar si supera los 2000px
+        max_dim = 2000
+        if img.width > max_dim or img.height > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            
+        # 2. Eliminación de fondo blanco (threshold > 240)
+        grayscale = img.convert("L")
+        datas = img.getdata()
+        gray_datas = grayscale.getdata()
+        
+        new_data = []
+        for i in range(len(datas)):
+            r, g, b, a = datas[i]
+            luma = gray_datas[i]
+            
+            if luma > 240:
+                alpha = 0
+            elif luma < 160:
+                alpha = 255
+            else:
+                alpha = int((240 - luma) / (240 - 160) * 255)
+                
+            new_data.append((r, g, b, alpha))
+            
+        img.putdata(new_data)
+        
+        # 3. Autocrop
+        bbox = img.getchannel('A').getbbox()
+        if bbox:
+            img = img.crop(bbox)
+            
+        # 4. Optimizar PNG
+        output = io.BytesIO()
+        img.save(output, format="PNG", optimize=True)
+        return output.getvalue()
+    except Exception as e:
+        print(f"❌ Error processing background removal: {e}")
+        raise e
+
 def create_mock_signature(text="Firma"):
     """Crea una firma de prueba (texto negro sobre fondo blanco) para verificar el procesador."""
     from PIL import ImageDraw, ImageFont

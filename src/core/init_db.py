@@ -40,6 +40,10 @@ async def init_db():
             ("users", "license_number", "VARCHAR"),
             ("users", "signature_img", "VARCHAR"),
             ("users", "stamp_img", "VARCHAR"),
+            ("organizations", "firma_png_url", "VARCHAR"),
+            ("organizations", "sello_png_url", "VARCHAR"),
+            ("organizations", "color_principal", "VARCHAR"),
+            ("organizations", "color_secundario", "VARCHAR"),
         ]
         
         for table, col, col_type in alterations:

@@ -81,11 +81,15 @@ def draw_watermark(canvas, doc, watermark_text):
     canvas.drawCentredString(0, 0, watermark_text.upper())
     canvas.restoreState()
 
-def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_digital=False, cert_hash=None, verify_url=None, signature_url=None, vet_name=None, vet_license=None):
+def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_digital=False, cert_hash=None, verify_url=None, signature_url=None, vet_name=None, vet_license=None, firma_org_url=None, sello_org_url=None, org_colors=None):
     """Certificado oficial de vacunación con formato de libreta sanitaria (Básico y Digital)."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     
+    org_colors = org_colors or {}
+    primary_color = org_colors.get("primary") or ("#D4AF37" if is_digital else "#E38E49")
+    secondary_color = org_colors.get("secondary") or ("#FFF8DC" if is_digital else "#F9D5B1")
+
     title = "CERTIFICADO DIGITAL DE VACUNACIÓN" if is_digital else "LIBRETA SANITARIA"
     elements, styles = _get_base_elements(org_name, title, is_digital)
 
@@ -109,10 +113,27 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
                 sig_bytes = resp.content
         except:
             pass
+            
+    firma_bytes = None
+    if firma_org_url:
+        try:
+            resp = requests.get(firma_org_url)
+            if resp.status_code == 200:
+                firma_bytes = resp.content
+        except: pass
+        
+    def get_firma_vet():
+        if firma_bytes:
+            return Image(io.BytesIO(firma_bytes), width=90, height=40)
+        elif sig_bytes:
+            return Image(io.BytesIO(sig_bytes), width=90, height=40)
+        return ""
 
-    def get_row_signature():
-        if sig_bytes:
-            return Image(io.BytesIO(sig_bytes), width=0.6*inch, height=0.3*inch)
+    def get_firma_sello():
+        if firma_bytes:
+            return Image(io.BytesIO(firma_bytes), width=160, height=90)
+        elif sig_bytes:
+            return Image(io.BytesIO(sig_bytes), width=160, height=90)
         return ""
 
     # --- SECCIÓN 1: PLAN SANITARIO (VACUNAS) ---
@@ -141,8 +162,8 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
-            # Firma en la fila de desparasitación
-            firma_row = get_row_signature() if is_digital else ""
+            # Firma en la fila de desparasitación (160x90 config)
+            firma_row = get_firma_sello() if is_digital else ""
             desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), firma_row])
             has_desp = True
         else:
@@ -153,27 +174,26 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
                 # Check for stamp/signature data stored in the vaccination record
                 signature_info = ""
                 if v.signature_data:
-                    signature_info = v.signature_data # This could be "Firmado por Dr. X - Mat 123"
+                    signature_info = v.signature_data
                 elif v.is_signed:
                     signature_info = "Firmado Digitalmente"
                 
-                # Use image if available, else text
-                firma_cell = get_row_signature() or Paragraph(signature_info, styles['Normal'])
+                # Use image if available, else text (90x40 config)
+                firma_cell = get_firma_vet() or Paragraph(signature_info, styles['Normal'])
                 
                 vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, firma_cell, prox])
             else:
                 # Basic Row
-                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), "", prox])
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), get_firma_sello(), prox])
             has_vac = True
 
-    # Estilos
+    # Estilos usando org_colors
+    header_bg = colors.HexColor(primary_color)
+    row_bg = colors.HexColor(secondary_color)
+    
     if is_digital:
-        header_bg = colors.HexColor("#D4AF37") # Gold
-        row_bg = colors.HexColor("#FFF8DC") # Cornsilk
         col_widths_vac = [1*inch, 2*inch, 1*inch, 1.5*inch, 1*inch]
     else:
-        header_bg = colors.HexColor("#E38E49") # Ocre (Original)
-        row_bg = colors.HexColor("#F9D5B1")
         col_widths_vac = [1.2*inch, 2.3*inch, 1.8*inch, 1.2*inch]
 
     
@@ -205,11 +225,10 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
     
     if has_desp:
         t_desp = Table(desp_data, colWidths=[1.2*inch, 1*inch, 2.5*inch, 1.8*inch])
-        # Reusamos estilo básico para desparasitación siempre por ahora
         t_desp_style = TableStyle([
-             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#E38E49")),
+             ('BACKGROUND', (0, 0), (-1, 0), header_bg),
              ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-             ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#F9D5B1")),
+             ('BACKGROUND', (0, 1), (-1, -1), row_bg),
              ('GRID', (0, 0), (-1, -1), 1, colors.white),
              ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
              ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),

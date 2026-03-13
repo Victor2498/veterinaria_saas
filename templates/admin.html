@@ -428,12 +428,12 @@
         <a href="#" class="nav-item" onclick="showSection('pacientes', this)">🐶 Pacientes</a>
         <a href="#" class="nav-item" onclick="showSection('servicios', this)">🏷️ Servicios</a>
         <a href="#" class="nav-item" onclick="showSection('atenciones', this)">Atenciones</a>
-        <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Mi Perfil</a>
+        <a href="#" class="nav-item" onclick="showSection('perfil', this)">⚙️ Mi Perfil</a>
         <a href="#" class="nav-item" onclick="showSection('caja', this)">💰 Caja</a>
 
         <div style="margin-top: auto;">
             <a href="/admin/subscription" class="nav-item">💎 Suscripción</a>
-            <a href="#" class="nav-item" onclick="openPasswordModal()">⚙️ Configuración</a>
+
             <div class="theme-toggle" onclick="toggleTheme()">
                 <span id="theme-text">Modo Claro</span>
                 <span id="theme-icon">🌞</span>
@@ -684,46 +684,146 @@
         </div>
     </div>
 
-    <!-- Configuration Modal (Profile + Password) -->
-    <div id="passwordModal" class="modal">
-        <div class="modal-content">
-            <h2>⚙️ Configuración de Perfil</h2>
-            
-            <h3 style="margin-top: 1rem; font-size: 1rem; color: var(--primary);">Datos Profesionales</h3>
-            <div class="form-group">
-                <label>Nombre Completo (como aparecerá en firmas)</label>
-                <input type="text" id="profFullName" placeholder="Ej: Dr. Juan Pérez" value="{{ user.full_name or '' }}">
-            </div>
-            <div class="form-group">
-                <label>Matrícula / Registro Profesional</label>
-                <input type="text" id="profLicense" placeholder="Ej: MP 1234 / MN 5678" value="{{ user.license_number or '' }}">
-            </div>
-            <div class="form-group">
-                <label>Firma / Sello (PNG o JPG)</label>
-                <input type="file" id="profSignature" accept="image/png, image/jpeg" style="width: 100%; padding: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;">
-                {% if user.signature_img %}
-                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--success);">
-                    ✅ Ya tienes una firma guardada (<a href="{{ user.signature_img }}" target="_blank" style="color:var(--primary);">Ver actual</a>). Sube otra para reemplazarla.
+        <!-- SECTION: PERFIL -->
+        <div id="section-perfil" class="content-section" style="display: none;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+                
+                <!-- Datos Personales -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Datos Personales</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Completo (como aparecerá en firmas)</label>
+                        <input type="text" id="profFullName" placeholder="Ej: Dr. Juan Pérez" value="{{ user.full_name or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Matrícula / Registro Profesional</label>
+                        <input type="text" id="profLicense" placeholder="Ej: MP 1234 / MN 5678" value="{{ user.license_number or '' }}">
+                    </div>
+                    <button class="btn" style="width: 100%; margin-top: 1rem;" onclick="submitProfileData()">Guardar Datos Personales</button>
                 </div>
-                {% endif %}
+
+                <!-- Seguridad -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Seguridad</h2>
+                    </div>
+                    <p style="color: var(--text-dim); margin-bottom: 1.5rem; font-size: 0.95rem;">Actualiza tu contraseña para mantener tu cuenta segura. Se cerrarán otras sesiones activas de ser necesario.</p>
+                    <button class="btn" style="width: 100%; background: var(--bg); color: var(--text-main) !important; border: 1px solid var(--border);" onclick="openPasswordChangeModal()">🔑 Cambiar Contraseña</button>
+                </div>
+                
+                <!-- Imagen / Firmas -->
+                <div class="section-card" style="grid-column: 1 / -1;">
+                    <div class="section-header">
+                        <h2>Imágenes y Firmas</h2>
+                    </div>
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 300px; background: var(--bg); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);">
+                            <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem;">Firma del Veterinario</h3>
+                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Para adjuntar a los certificados digitales y la libreta sanitaria.</p>
+                            
+                            {% if user.signature_img %}
+                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
+                                <img src="{{ user.signature_img }}" alt="Firma Actual" style="max-height: 100px; max-width: 100%;">
+                            </div>
+                            {% else %}
+                            <div style="background: var(--card); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 2px dashed var(--border); color: var(--text-dim); height: 120px; display: flex; align-items: center; justify-content: center;">
+                                Sin firma cargada
+                            </div>
+                            {% endif %}
+                            
+                            <button class="btn" style="width: 100%;" onclick="openImageUploadModal('firma')">Subir Nueva Firma</button>
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 300px; background: var(--bg); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);">
+                            <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem;">Sello de la Veterinaria</h3>
+                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Se usará en los certificados PDF y reportes oficiales.</p>
+                            
+                            {% if org.sello_png_url %}
+                            <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
+                                <img src="{{ org.sello_png_url }}" alt="Sello Actual" style="max-height: 100px; max-width: 100%;">
+                            </div>
+                            {% else %}
+                            <div style="background: var(--card); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 2px dashed var(--border); color: var(--text-dim); height: 120px; display: flex; align-items: center; justify-content: center;">
+                                Sin sello cargado
+                            </div>
+                            {% endif %}
+                            
+                            <button class="btn" style="width: 100%;" onclick="openImageUploadModal('sello')">Subir Sello</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            <button class="btn" style="width: 100%; margin-bottom: 1.5rem;" onclick="submitProfileUpdate()">Guardar Datos Profesionales</button>
+        </div>
+    </div> <!-- Close Main! Wait, I shouldn't duplicate close tags if it wasn't there. -->
 
-            <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
-
-            <h3 style="font-size: 1rem; color: var(--primary);">Seguridad</h3>
+    <!-- MODAL: CAMBIAR CONTRASEÑA -->
+    <div id="passwordChangeModal" class="modal">
+        <div class="modal-content" style="max-width: 420px; padding: 2.5rem 2rem;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.4rem;">🔑 Cambiar contraseña</h2>
+            </div>
+            
             <div class="form-group">
                 <label>Contraseña Actual</label>
                 <input type="password" id="oldPass" placeholder="••••••••">
             </div>
             <div class="form-group">
                 <label>Nueva Contraseña</label>
-                <input type="password" id="newPass" placeholder="••••••••">
+                <input type="password" id="newPass" placeholder="Mínimo 8 caracteres" onkeyup="checkPasswordMatch()">
             </div>
-            <div style="display: flex; gap: 1rem;">
-                <button class="btn" style="flex: 1;" onclick="submitPasswordChange()">Actualizar Contraseña</button>
-                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;"
-                    onclick="closePasswordModal()">Cerrar</button>
+            <div class="form-group">
+                <label>Confirmar Nueva Contraseña</label>
+                <input type="password" id="confirmPass" placeholder="••••••••" onkeyup="checkPasswordMatch()">
+                <div id="passMatchAlert" style="color: #f43f5e; font-size: 0.8rem; margin-top: 0.5rem; display: none;">Las contraseñas no coinciden</div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn" id="btnUpdatePass" style="flex: 1;" onclick="submitPasswordChange()">Actualizar</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;" onclick="closePasswordChangeModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SUBIR IMAGEN (Drag & Drop) -->
+    <div id="imageUploadModal" class="modal">
+        <div class="modal-content" style="max-width: 480px; width: 90vw;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.4rem;" id="uploadModalTitle">Subir Imagen</h2>
+                <button onclick="closeImageUploadModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-dim);">&times;</button>
+            </div>
+            
+            <input type="hidden" id="uploadType"> <!-- 'firma' o 'sello' -->
+            
+            <!-- Dropzone -->
+            <div id="dropzone" style="min-height: 220px; border: 2px dashed var(--border); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; cursor: pointer; transition: 0.3s; background: var(--bg); position: relative; overflow: hidden;" onclick="document.getElementById('hiddenFileInput').click()">
+                
+                <input type="file" id="hiddenFileInput" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleFileSelect(event)">
+                
+                <div id="dropzoneContent">
+                    <span style="font-size: 3rem; opacity: 0.5;">🖼️</span>
+                    <h3 style="margin-top: 1rem; color: var(--text-main); font-size: 1.1rem;">Arrastra tu imagen aquí</h3>
+                    <p style="color: var(--text-dim); font-size: 0.9rem; margin-top: 0.5rem;">o haz clic para explorar</p>
+                    <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+                        <span class="badge" style="background: var(--card); border: 1px solid var(--border);">JPG</span>
+                        <span class="badge" style="background: var(--card); border: 1px solid var(--border);">PNG</span>
+                        <span class="badge" style="background: var(--card); border: 1px solid var(--border);">WEBP</span>
+                    </div>
+                </div>
+
+                <!-- Preview Overlay -->
+                <div id="imagePreviewContainer" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:white; align-items: center; justify-content: center;">
+                    <img id="imagePreview" src="" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+                    <button onclick="clearImageSelection(event)" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">&times;</button>
+                </div>
+            </div>
+            
+            <p style="color: var(--text-dim); font-size: 0.8rem; text-align: center; margin-top: 1rem;">Tamaño máximo: 5MB</p>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="btnSaveImage" style="flex: 1;" onclick="submitImageUpload()" disabled>Guardar Imagen</button>
+                <button class="btn" style="flex: 1; background: var(--bg); color: var(--text-dim) !important;" onclick="closeImageUploadModal()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -970,18 +1070,42 @@
             });
         }
 
-        function openPasswordModal() {
-            document.getElementById('passwordModal').style.display = 'flex';
+        function openPasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'flex';
         }
 
-        function closePasswordModal() {
-            document.getElementById('passwordModal').style.display = 'none';
+        function closePasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'none';
+        }
+
+        function checkPasswordMatch() {
+            const newP = document.getElementById('newPass').value;
+            const confP = document.getElementById('confirmPass').value;
+            const alertBox = document.getElementById('passMatchAlert');
+            const btn = document.getElementById('btnUpdatePass');
+            
+            if (confP.length > 0 && newP !== confP) {
+                alertBox.style.display = 'block';
+                btn.disabled = true;
+            } else {
+                alertBox.style.display = 'none';
+                btn.disabled = false;
+            }
         }
 
         async function submitPasswordChange() {
             const old_password = document.getElementById('oldPass').value;
             const new_password = document.getElementById('newPass').value;
-            if (!old_password || !new_password) return alert('Ingresa ambas contraseñas');
+            const confirm_password = document.getElementById('confirmPass').value;
+            
+            if (!old_password || !new_password || !confirm_password) return Swal.fire('Error', 'Completa todos los campos', 'error');
+            if (new_password.length < 8) return Swal.fire('Error', 'La nueva contraseña debe tener al menos 8 caracteres', 'error');
+            if (new_password !== confirm_password) return Swal.fire('Error', 'Las contraseñas no coinciden', 'error');
+
+            const btn = document.getElementById('btnUpdatePass');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '⏳ Guardando...';
+            btn.disabled = true;
 
             const res = await fetch('/admin/change_password', {
                 method: 'POST',
@@ -989,29 +1113,32 @@
                 body: JSON.stringify({ old_password, new_password })
             });
 
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+
             if (res.ok) {
-                alert('¡Contraseña actualizada con éxito!');
-                closePasswordModal();
+                Swal.fire('¡Éxito!', 'Contraseña actualizada con éxito', 'success');
+                closePasswordChangeModal();
+                document.getElementById('oldPass').value = '';
+                document.getElementById('newPass').value = '';
+                document.getElementById('confirmPass').value = '';
             } else {
                 const err = await res.json();
-                alert('Error: ' + (err.detail || 'No se pudo actualizar la contraseña.'));
+                Swal.fire('Error', (err.detail || 'No se pudo actualizar la contraseña.'), 'error');
             }
         }
 
-        async function submitProfileUpdate() {
+        async function submitProfileData() {
             const fullName = document.getElementById('profFullName').value;
             const license = document.getElementById('profLicense').value;
-            const signatureFile = document.getElementById('profSignature').files[0];
 
             if (!fullName) return Swal.fire('Error', 'El nombre completo es obligatorio', 'error');
 
             const formData = new FormData();
             formData.append('full_name', fullName);
             if (license) formData.append('license_number', license);
-            if (signatureFile) formData.append('signature', signatureFile);
 
-            // Disable button during upload
-            const btn = document.querySelector('button[onclick="submitProfileUpdate()"]');
+            const btn = document.querySelector('button[onclick="submitProfileData()"]');
             const originalText = btn.innerHTML;
             btn.innerHTML = "⏳ Guardando...";
             btn.disabled = true;
@@ -1023,8 +1150,13 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    Swal.fire('¡Éxito!', 'Perfil profesional actualizado correctamente.', 'success');
-                    setTimeout(() => window.location.reload(), 1500);
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: 'Datos personales actualizados correctamente.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => window.location.reload());
                 } else {
                     Swal.fire('Error', data.detail || 'No se pudo actualizar el perfil', 'error');
                 }
@@ -1033,6 +1165,124 @@
                 Swal.fire('Error', 'Error de conexión al guardar el perfil', 'error');
             } finally {
                 btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // IMAGE UPLOAD LOGIC
+        let selectedImageFile = null;
+
+        function openImageUploadModal(type) {
+            document.getElementById('uploadType').value = type;
+            document.getElementById('uploadModalTitle').innerText = type === 'firma' ? 'Subir Firma' : 'Subir Sello';
+            document.getElementById('imageUploadModal').style.display = 'flex';
+            clearImageSelection(new Event('temp')); // Reset state
+        }
+
+        function closeImageUploadModal() {
+            document.getElementById('imageUploadModal').style.display = 'none';
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                Swal.fire('Error', 'La imagen supera los 5MB permitidos.', 'error');
+                return;
+            }
+
+            selectedImageFile = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('dropzoneContent').style.display = 'none';
+                document.getElementById('imagePreviewContainer').style.display = 'flex';
+                document.getElementById('btnSaveImage').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImageSelection(e) {
+            e.stopPropagation(); // Evitar que abra el input file
+            selectedImageFile = null;
+            document.getElementById('hiddenFileInput').value = '';
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('dropzoneContent').style.display = 'block';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('btnSaveImage').disabled = true;
+        }
+
+        // Drag and drop events
+        window.addEventListener('DOMContentLoaded', () => {
+            const dropzone = document.getElementById('dropzone');
+            if(dropzone) {
+                dropzone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropzone.style.borderColor = 'var(--primary)';
+                    dropzone.style.background = 'var(--sidebar-hover)';
+                });
+                dropzone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    dropzone.style.borderColor = 'var(--border)';
+                    dropzone.style.background = 'var(--bg)';
+                });
+                dropzone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropzone.style.borderColor = 'var(--border)';
+                    dropzone.style.background = 'var(--bg)';
+                    if (e.dataTransfer.files.length) {
+                        document.getElementById('hiddenFileInput').files = e.dataTransfer.files;
+                        handleFileSelect({target: {files: e.dataTransfer.files}});
+                    }
+                });
+            }
+        });
+
+        async function submitImageUpload() {
+            if (!selectedImageFile) return;
+
+            const type = document.getElementById('uploadType').value;
+            const formData = new FormData();
+            
+            let url = '';
+            if (type === 'firma') {
+                url = '/admin/upload_firma';
+                formData.append('firma_file', selectedImageFile);
+            } else {
+                url = '/admin/upload_sello';
+                formData.append('sello_file', selectedImageFile);
+            }
+
+            const btn = document.getElementById('btnSaveImage');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '⏳ Subiendo y procesando...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: 'Imagen procesada y guardada correctamente.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.detail || 'Fallo al procesar la imagen.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'Problema de red al subir la imagen', 'error');
+            } finally {
+                btn.innerHTML = ogText;
                 btn.disabled = false;
             }
         }

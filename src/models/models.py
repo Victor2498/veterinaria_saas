@@ -14,10 +14,16 @@ class Organization(Base):
     # SaaS Config per Org
     evolution_api_url = Column(String, nullable=True)
     evolution_api_key = Column(String, nullable=True)
-    evolution_instance = Column(String, nullable=True)
+    evolution_api_instance = Column(String, nullable=True)
     openai_api_key = Column(String, nullable=True)
     plan_type = Column(String, default="basic") # lite, basic, pro
     google_calendar_id = Column(String, nullable=True)
+    
+    # Signature and Seal Settings 
+    firma_png_url = Column(String, nullable=True)
+    sello_png_url = Column(String, nullable=True)
+    color_principal = Column(String, nullable=True)
+    color_secundario = Column(String, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

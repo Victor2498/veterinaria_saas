@@ -86,7 +86,10 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
                 verify_url=verify_url,
                 signature_url=current_signature,
                 vet_name=current_name,
-                vet_license=current_license
+                vet_license=current_license,
+                firma_org_url=org.firma_png_url,
+                sello_org_url=org.sello_png_url,
+                org_colors={"primary": org.color_principal, "secondary": org.color_secundario}
             )
         except Exception as e:
             print(f"Error generating PDF: {e}")

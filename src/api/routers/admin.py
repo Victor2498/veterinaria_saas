@@ -148,7 +148,12 @@ async def export_vaccines(patient_id: int, username: str = Depends(admin_require
         vac_res = await session.execute(select(Vaccination).where(Vaccination.patient_id == patient_id))
         vaccinations = vac_res.scalars().all()
         
-        pdf_buffer = generate_vaccination_certificate(org.name, patient.name, vaccinations, patient.weight)
+        pdf_buffer = generate_vaccination_certificate(
+            org.name, patient.name, vaccinations, patient.weight,
+            firma_org_url=org.firma_png_url,
+            sello_org_url=org.sello_png_url,
+            org_colors={"primary": org.color_principal, "secondary": org.color_secundario}
+        )
         return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=vacunas_{patient.name}.pdf"})
 
 from src.services.billing import create_plan_payment_link
@@ -587,4 +592,109 @@ async def update_profile(
                 user.stamp_img = public_url # Guardamos en los dos campos por conveniencia
         
         await session.commit()
-        return {"status": "success", "message": "Perfil profesional actualizado"}
+from src.services.image_processor import process_firma_sello
+
+@router.post("/upload_firma")
+async def upload_firma(
+    firma_file: UploadFile = File(...),
+    username: str = Depends(admin_required)
+):
+    async with AsyncSessionLocal() as session:
+        user_res = await session.execute(select(User).where(User.username == username))
+        user = user_res.scalar()
+        if not user: raise HTTPException(status_code=404)
+        
+        # Format Check
+        if firma_file.content_type not in ["image/jpeg", "image/png", "image/webp", "image/jpg"]:
+            raise HTTPException(status_code=400, detail="Formato no permitido. Use JPG, PNG o WEBP.")
+            
+        file_bytes = await firma_file.read()
+        
+        # Size Check
+        if len(file_bytes) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="El archivo excede los 5MB permitidos.")
+            
+        try:
+            # Pipiline: Resize, BG remove, optimize -> bytes
+            processed_bytes = process_firma_sello(file_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error procesando la imagen: {e}")
+            
+        # Storage
+        path = f"firmas/{user.org_id}/firma_{user.org_id}.png"
+        from src.services.storage import storage_service
+        res, err = storage_service.upload_file(processed_bytes, path, "image/png")
+        if err:
+            raise HTTPException(status_code=500, detail="Error al subir la imagen procesada")
+            
+        public_url = storage_service.get_public_url(path)
+        
+        # Update Org
+        org_res = await session.execute(select(Organization).where(Organization.id == user.org_id))
+        org = org_res.scalar()
+        if org and public_url:
+            org.firma_png_url = public_url
+            
+        await session.commit()
+        return {"status": "success", "url": public_url}
+
+@router.post("/upload_sello")
+async def upload_sello(
+    sello_file: UploadFile = File(...),
+    username: str = Depends(admin_required)
+):
+    async with AsyncSessionLocal() as session:
+        user_res = await session.execute(select(User).where(User.username == username))
+        user = user_res.scalar()
+        if not user: raise HTTPException(status_code=404)
+        
+        if sello_file.content_type not in ["image/jpeg", "image/png", "image/webp", "image/jpg"]:
+            raise HTTPException(status_code=400, detail="Formato no permitido. Use JPG, PNG o WEBP.")
+            
+        file_bytes = await sello_file.read()
+        
+        if len(file_bytes) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="El archivo excede los 5MB permitidos.")
+            
+        try:
+            processed_bytes = process_firma_sello(file_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error procesando la imagen: {e}")
+            
+        path = f"sellos/{user.org_id}/sello_{user.org_id}.png"
+        from src.services.storage import storage_service
+        res, err = storage_service.upload_file(processed_bytes, path, "image/png")
+        if err:
+            raise HTTPException(status_code=500, detail="Error al subir la imagen procesada")
+            
+        public_url = storage_service.get_public_url(path)
+        
+        org_res = await session.execute(select(Organization).where(Organization.id == user.org_id))
+        org = org_res.scalar()
+        if org and public_url:
+            org.sello_png_url = public_url
+            
+        await session.commit()
+        return {"status": "success", "url": public_url}
+
+@router.post("/update_colors")
+async def update_colors(request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    color_principal = data.get("color_principal")
+    color_secundario = data.get("color_secundario")
+    
+    async with AsyncSessionLocal() as session:
+        user_res = await session.execute(select(User).where(User.username == username))
+        user = user_res.scalar()
+        if not user: raise HTTPException(status_code=404)
+        
+        org_res = await session.execute(select(Organization).where(Organization.id == user.org_id))
+        org = org_res.scalar()
+        if org:
+            if color_principal:
+                org.color_principal = color_principal
+            if color_secundario:
+                org.color_secundario = color_secundario
+            await session.commit()
+            return {"status": "success"}
+        raise HTTPException(status_code=404)

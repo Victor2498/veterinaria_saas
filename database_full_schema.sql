@@ -10,6 +10,10 @@ CREATE TABLE organizations (
 	openai_api_key VARCHAR, 
 	plan_type VARCHAR, 
 	google_calendar_id VARCHAR, 
+	firma_png_url VARCHAR,
+	sello_png_url VARCHAR,
+	color_principal VARCHAR,
+	color_secundario VARCHAR,
 	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(), 
 	PRIMARY KEY (id)
 )
