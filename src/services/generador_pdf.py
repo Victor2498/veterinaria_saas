@@ -11,12 +11,13 @@ class PDFCertificado(FPDF):
 
     def header(self):
         # We handle watermark here
-        self.set_font("Helvetica", "B", 50)
-        self.set_text_color(245, 245, 245)  # Very light grey
+        self.set_font("Helvetica", "B", 45)
+        self.set_text_color(240, 240, 240)  # Very light grey
         with self.local_context():
-            with self.rotation(45, 10, 250):
-                self.set_xy(10, 250)
-                self.cell(0, 0, self.watermark_text, align="C")
+            # Rotation center should be near the center of the page for centered watermark
+            with self.rotation(45, 105, 148):
+                self.set_xy(0, 148)
+                self.cell(210, 0, self.watermark_text, align="C")
 
     def footer(self):
         # Footer with officiality notice

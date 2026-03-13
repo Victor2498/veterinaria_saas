@@ -53,7 +53,28 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
         base_url = request.base_url
         verify_url = f"{base_url}verify/{cert_hash}"
 
-        # 4. Generate PDF
+        # 4. Sync VeterinaryProfile & Generate PDF
+        vet_res = await session.execute(select(VeterinaryProfile).where(VeterinaryProfile.matricula_profesional == (user.license_number or 'M-000')))
+        vet_profile = vet_res.scalar()
+        
+        current_name = user.full_name or user.username
+        current_license = user.license_number or 'M-000'
+        current_signature = user.stamp_img or user.signature_img
+        
+        if not vet_profile:
+            vet_profile = VeterinaryProfile(
+                nombre_completo=current_name,
+                matricula_profesional=current_license,
+                nombre_veterinaria=org.name,
+                firma_sello_url=current_signature
+            )
+            session.add(vet_profile)
+            await session.flush()
+        else:
+            vet_profile.nombre_completo = current_name
+            vet_profile.firma_sello_url = current_signature
+            await session.flush()
+
         try:
             pdf_buffer = generate_vaccination_certificate(
                 org_name=org.name,
@@ -62,7 +83,10 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
                 patient_weight=patient.weight,
                 is_digital=True,
                 cert_hash=cert_hash,
-                verify_url=verify_url
+                verify_url=verify_url,
+                signature_url=current_signature,
+                vet_name=current_name,
+                vet_license=current_license
             )
         except Exception as e:
             print(f"Error generating PDF: {e}")

@@ -6,6 +6,8 @@ from reportlab.lib.units import inch
 from datetime import datetime
 import io
 import qrcode
+import requests
+from reportlab.lib.utils import ImageReader
 
 def _get_base_elements(org_name, title, is_digital=False):
     """Helper to create professional header for all PDFs."""
@@ -66,7 +68,20 @@ def generate_clinical_history_pdf(org_name, owner_name, patient_name, records):
     buffer.seek(0)
     return buffer
 
-def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_digital=False, cert_hash=None, verify_url=None):
+def draw_watermark(canvas, doc, watermark_text):
+    """Draws a centered diagonal watermark."""
+    canvas.saveState()
+    canvas.setFont('Helvetica-Bold', 50)
+    canvas.setStrokeColor(colors.lightgrey)
+    canvas.setFillColor(colors.lightgrey, alpha=0.15)
+    
+    # Position in center of page
+    canvas.translate(4.25 * inch, 5.5 * inch)
+    canvas.rotate(45)
+    canvas.drawCentredString(0, 0, watermark_text.upper())
+    canvas.restoreState()
+
+def generate_vaccination_certificate(org_name, patient_name, vaccinations, patient_weight=None, is_digital=False, cert_hash=None, verify_url=None, signature_url=None, vet_name=None, vet_license=None):
     """Certificado oficial de vacunación con formato de libreta sanitaria (Básico y Digital)."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -216,10 +231,40 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
             ('ALIGN', (0,0), (0,0), 'CENTER'),
         ]))
         elements.append(qr_table)
+        
+        # --- Signature and Stamp Section (Right Side) ---
+        if signature_url or vet_name:
+            elements.append(Spacer(1, 20))
+            
+            sig_elements = []
+            if signature_url:
+                try:
+                    # Download image for ReportLab
+                    response = requests.get(signature_url)
+                    if response.status_code == 200:
+                        img_data = io.BytesIO(response.content)
+                        sig_img = Image(img_data, width=2.0*inch, height=1.0*inch)
+                        sig_elements.append(sig_img)
+                except Exception as e:
+                    print(f"Error loading signature image: {e}")
+            
+            sig_elements.append(Paragraph(f"<b>Dr/a. {vet_name or 'Profesional'}</b>", styles['Normal']))
+            if vet_license:
+                sig_elements.append(Paragraph(f"<font size=8>Matrícula: {vet_license}</font>", styles['Normal']))
+            
+            # Combine in a table for alignment
+            sig_box = [[Spacer(1,1), sig_elements]]
+            t_sig = Table(sig_box, colWidths=[4.5*inch, 2.0*inch])
+            t_sig.setStyle(TableStyle([
+                ('ALIGN', (1,0), (1,0), 'CENTER'),
+                ('VALIGN', (1,0), (1,0), 'BOTTOM'),
+            ]))
+            elements.append(t_sig)
+
     else:
         elements.append(Paragraph("<i>Este documento es un registro oficial de la clínica. Los sellos y firmas físicos validan la aplicación de cada dosis.</i>", styles['Normal']))
     
-    doc.build(elements)
+    doc.build(elements, onFirstPage=lambda c, d: draw_watermark(c, d, org_name))
     buffer.seek(0)
     return buffer
 
