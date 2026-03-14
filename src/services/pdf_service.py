@@ -124,8 +124,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         qr_col = []
         if qr_img:
-            # Swap order: Legend above, QR below to align QR base with divider
-            qr_col.append(Paragraph("DOCUMENTO OFICIAL<br/>VERIFICABLE", badge_style))
+            # Removed legend per user request, keeping only the QR
             qr_col.append(qr_img)
         
         # 3-Column Header Table
