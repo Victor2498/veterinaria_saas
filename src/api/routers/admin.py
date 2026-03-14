@@ -362,7 +362,8 @@ async def add_vaccination(request: Request, username: str = Depends(admin_requir
             is_signed=is_signed,
             signed_at=datetime.now() if is_signed else None,
             signature_data=f"Firmado por: {user.full_name or user.username} - Mat: {user.license_number or '---'}" if is_signed else None,
-            vet_stamp=f"{user.full_name}\nMat. {user.license_number}" if is_signed else None
+            vet_stamp=f"{user.full_name}\nMat. {user.license_number}" if is_signed else None,
+            signature_hash=user.signature_img or user.stamp_img if is_signed else None
         )
         session.add(new_vac)
         await session.commit()
@@ -599,6 +600,7 @@ async def upload_firma(
     firma_file: UploadFile = File(...),
     username: str = Depends(admin_required)
 ):
+    print(f"DEBUG: upload_firma started for {username}")
     async with AsyncSessionLocal() as session:
         user_res = await session.execute(select(User).where(User.username == username))
         user = user_res.scalar()
@@ -640,6 +642,7 @@ async def upload_sello(
     sello_file: UploadFile = File(...),
     username: str = Depends(admin_required)
 ):
+    print(f"DEBUG: upload_sello started for {username}, file: {sello_file.filename}")
     async with AsyncSessionLocal() as session:
         user_res = await session.execute(select(User).where(User.username == username))
         user = user_res.scalar()

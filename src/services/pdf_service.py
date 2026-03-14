@@ -149,38 +149,52 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
         elements.append(Spacer(1, 15))
 
-    # Cache signature for table rows
-    sig_bytes = None
-    if signature_url:
+    # Local image cache for performance (especially for multi-vet certificates)
+    _image_cache = {}
+
+    def fetch_image(url, width, height):
+        if not url: return None
+        if url in _image_cache:
+            return Image(io.BytesIO(_image_cache[url]), width=width, height=height)
+        
         try:
-            resp = requests.get(signature_url, timeout=10)
+            resp = requests.get(url, timeout=10)
             if resp.status_code == 200:
                 # Apply transparency processing
-                sig_bytes = process_transparency(resp.content)
-        except:
-            pass
+                proc_bytes = process_transparency(resp.content)
+                _image_cache[url] = proc_bytes
+                return Image(io.BytesIO(proc_bytes), width=width, height=height)
+        except Exception as e:
+            print(f"Error fetching image {url}: {e}")
+        return None
+
+    # Global signature (fallback)
+    global_sig_img = fetch_image(signature_url, 90, 40)
+    global_sig_stamp_img = fetch_image(signature_url, 95, 54)
             
     firma_bytes = None
     if firma_org_url:
         try:
             resp = requests.get(firma_org_url, timeout=10)
             if resp.status_code == 200:
-                # Apply transparency processing
                 firma_bytes = process_transparency(resp.content)
         except: pass
         
-    def get_firma_vet():
+    def get_firma_vet(v_url=None):
+        if v_url:
+            img = fetch_image(v_url, 90, 40)
+            if img: return img
         if firma_bytes:
             return Image(io.BytesIO(firma_bytes), width=90, height=40)
-        elif sig_bytes:
-            return Image(io.BytesIO(sig_bytes), width=90, height=40)
-        return ""
+        return global_sig_img or ""
 
-    def get_firma_sello():
-        # Unified: Prioritize signature (which now contains stamp)
-        if sig_bytes:
-            return Image(io.BytesIO(sig_bytes), width=95, height=54)
-        elif firma_bytes:
+    def get_firma_sello(v_url=None):
+        if v_url:
+            img = fetch_image(v_url, 95, 54)
+            if img: return img
+        if global_sig_stamp_img:
+            return global_sig_stamp_img
+        if firma_bytes:
             return Image(io.BytesIO(firma_bytes), width=95, height=54)
         return ""
 
@@ -211,7 +225,7 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         if is_desp:
             weight_str = f"{patient_weight} kg" if patient_weight else "-"
             # Firma en la fila de desparasitación (160x90 config)
-            firma_row = get_firma_sello() if is_digital else ""
+            firma_row = get_firma_sello(v.signature_hash) if is_digital else ""
             desp_data.append([fecha, weight_str, Paragraph(v.vaccine_name, styles['Normal']), firma_row])
             has_desp = True
         else:
@@ -227,12 +241,12 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
                     signature_info = "Firmado Digitalmente"
                 
                 # Use image if available, else text (90x40 config)
-                firma_cell = get_firma_vet() or Paragraph(signature_info, styles['Normal'])
+                firma_cell = get_firma_vet(v.signature_hash) or Paragraph(signature_info, styles['Normal'])
                 
                 vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), lote, firma_cell, prox])
             else:
                 # Basic Row
-                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), get_firma_sello(), prox])
+                vac_data.append([fecha, Paragraph(v.vaccine_name, styles['Normal']), get_firma_sello(v.signature_hash), prox])
             has_vac = True
 
     # Estilos usando org_colors
