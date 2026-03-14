@@ -11,37 +11,35 @@ def process_transparency(image_bytes: bytes, threshold: int = 220, intensity_gai
         img = Image.open(io.BytesIO(image_bytes))
         img = img.convert("RGBA")
         
-        # Convertir a escala de grises para calcular intensidad
+        # Convert to grayscale to calculate intensity
         grayscale = img.convert("L")
         
-        datas = img.getdata()
-        gray_datas = grayscale.getdata()
-        
-        new_data = []
-        for i in range(len(datas)):
-            r, g, b, a = datas[i]
-            luma = gray_datas[i]
-            
-            # Mapeo de transparencia optimizado para 'Multiply'
-            # Si luma > 245 -> alpha 0 (Totalmente blanco)
-            # Si luma < 160 -> alpha 255 (Tinta pura)
+        # Lookup Table (LUT) for transparency mapping
+        lut_alpha = []
+        for luma in range(256):
             if luma > 245:
                 alpha = 0
             elif luma < 160:
                 alpha = 255
             else:
                 alpha = int((245 - luma) / (245 - 160) * 255)
-            
-            # Realce de color: oscurecemos los canales si hay tinta
-            if alpha > 0:
-                f = 1.0 / intensity_gain
-                r = int(max(0, r * f))
-                g = int(max(0, g * f))
-                b = int(max(0, b * f))
-            
-            new_data.append((r, g, b, alpha))
+            lut_alpha.append(alpha)
         
-        img.putdata(new_data)
+        # LUT for color enhancement (darkening)
+        f = 1.0 / intensity_gain
+        lut_color = [int(max(0.0, float(i) * f)) for i in range(256)]
+        
+        # Apply LUTs
+        alpha_channel = grayscale.point(lut_alpha)
+        
+        # Split channels and apply enhancement to RGB
+        r, g, b, _ = img.split()
+        r = r.point(lut_color)
+        g = g.point(lut_color)
+        b = b.point(lut_color)
+        
+        # Merge back with the new alpha
+        img = Image.merge("RGBA", (r, g, b, alpha_channel))
         
         # Recortar bordes vacíos automáticamente (Autocrop)
         bbox = img.getchannel('A').getbbox()
@@ -72,26 +70,21 @@ def process_firma_sello(image_bytes: bytes) -> bytes:
         if img.width > max_dim or img.height > max_dim:
             img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
             
-        # 2. Eliminación de fondo blanco (threshold > 240)
+        # 2. Eliminación de fondo blanco via LUT (Mucho más rápido que loops)
         grayscale = img.convert("L")
-        datas = img.getdata()
-        gray_datas = grayscale.getdata()
         
-        new_data = []
-        for i in range(len(datas)):
-            r, g, b, a = datas[i]
-            luma = gray_datas[i]
-            
+        lut_alpha = []
+        for luma in range(256):
             if luma > 240:
                 alpha = 0
             elif luma < 160:
                 alpha = 255
             else:
                 alpha = int((240 - luma) / (240 - 160) * 255)
-                
-            new_data.append((r, g, b, alpha))
+            lut_alpha.append(alpha)
             
-        img.putdata(new_data)
+        alpha_channel = grayscale.point(lut_alpha)
+        img.putalpha(alpha_channel)
         
         # 3. Autocrop
         bbox = img.getchannel('A').getbbox()
