@@ -721,7 +721,7 @@
                     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 300px; background: var(--bg); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);">
                             <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem;">Firma del Veterinario</h3>
-                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Para adjuntar a los certificados digitales y la libreta sanitaria.</p>
+                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Suba una sola imagen que contenga su firma y sello profesional impresos juntos.</p>
                             
                             {% if user.signature_img %}
                             <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
@@ -737,20 +737,20 @@
                         </div>
                         
                         <div style="flex: 1; min-width: 300px; background: var(--bg); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);">
-                            <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem;">Sello de la Veterinaria</h3>
-                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Se usará en los certificados PDF y reportes oficiales.</p>
+                            <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem;">Insignia de la Veterinaria</h3>
+                            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1rem;">Logotipo o insignia oficial que aparecerá en la cabecera de los certificados.</p>
                             
                             {% if org.sello_png_url %}
                             <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; height: 120px; display: flex; align-items: center; justify-content: center;">
-                                <img src="{{ org.sello_png_url }}?t={{ range(1, 1000000) | random }}" alt="Sello Actual" style="max-height: 100px; max-width: 100%;">
+                                <img src="{{ org.sello_png_url }}?t={{ range(1, 1000000) | random }}" alt="Insignia Actual" style="max-height: 100px; max-width: 100%;">
                             </div>
                             {% else %}
                             <div style="background: var(--card); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 2px dashed var(--border); color: var(--text-dim); height: 120px; display: flex; align-items: center; justify-content: center;">
-                                Sin sello cargado
+                                Sin insignia cargada
                             </div>
                             {% endif %}
                             
-                            <button class="btn" style="width: 100%;" onclick="openImageUploadModal('sello')">Subir Sello</button>
+                            <button class="btn" style="width: 100%;" onclick="openImageUploadModal('sello')">Subir Insignia</button>
                         </div>
                     </div>
                 </div>

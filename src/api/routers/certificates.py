@@ -59,7 +59,9 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
         
         current_name = user.full_name or user.username
         current_license = user.license_number or 'M-000'
-        current_signature = user.stamp_img or user.signature_img
+        # Prioritize unified signature image from user profile with cache buster
+        raw_signature = user.stamp_img or user.signature_img
+        current_signature = f"{raw_signature}?t={uuid.uuid4().hex[:8]}" if raw_signature else None
         
         if not vet_profile:
             vet_profile = VeterinaryProfile(
@@ -87,7 +89,7 @@ async def generate_digital_certificate(patient_id: int, request: Request, userna
                 signature_url=current_signature,
                 vet_name=current_name,
                 vet_license=current_license,
-                firma_org_url=org.firma_png_url,
+                firma_org_url=None, # Deprecated in favor of unified user signature
                 sello_org_url=org.sello_png_url,
                 org_colors={"primary": org.color_principal, "secondary": org.color_secundario}
             )
@@ -144,10 +146,11 @@ async def emit_advanced_certificate(vaccination_id: int, request: Request, usern
         vet_res = await session.execute(select(VeterinaryProfile).where(VeterinaryProfile.matricula_profesional == (user.license_number or 'M-000')))
         vet_profile = vet_res.scalar()
         
-        # Latest data from user
+        # Latest data from user - Unified signature/sello
         current_name = user.full_name or user.username
         current_license = user.license_number or 'M-000'
-        current_signature = user.stamp_img or user.signature_img
+        raw_signature = user.signature_img or user.stamp_img
+        current_signature = f"{raw_signature}?t={uuid.uuid4().hex[:8]}" if raw_signature else None
         
         if not vet_profile:
             vet_profile = VeterinaryProfile(
