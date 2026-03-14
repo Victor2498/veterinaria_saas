@@ -124,24 +124,28 @@ def generate_vaccination_certificate(org_name, patient_name, vaccinations, patie
         
         qr_col = []
         if qr_img:
-            qr_col.append(qr_img)
+            # Swap order: Legend above, QR below to align QR base with divider
             qr_col.append(Paragraph("DOCUMENTO OFICIAL<br/>VERIFICABLE", badge_style))
+            qr_col.append(qr_img)
         
         # 3-Column Header Table
+        # Widths: Patient (2.0) | Title (2.5) | QR (2.0) -> More separation and right-alignment
         h_data = [[patient_info, Paragraph(title_text, title_style), qr_col]]
-        h_table = Table(h_data, colWidths=[2.2*inch, 2.6*inch, 1.7*inch])
+        h_table = Table(h_data, colWidths=[2.1*inch, 2.5*inch, 1.9*inch])
         h_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('VALIGN', (2,0), (2,0), 'BOTTOM'), # Align QR base to bottom
             ('ALIGN', (0,0), (0,0), 'LEFT'),
             ('ALIGN', (1,0), (1,0), 'CENTER'),
-            ('ALIGN', (2,0), (2,0), 'CENTER'),
+            ('ALIGN', (2,0), (2,0), 'RIGHT'), # Push QR to right margin
             ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (1,0), 10),
+            ('BOTTOMPADDING', (2,0), (2,0), 0), # QR touches the line
         ]))
         
         elements.append(Paragraph(f"<b>{org_name.upper()}</b>", ParagraphStyle('OrgName', parent=styles['Normal'], fontSize=9, textColor=colors.grey, spaceAfter=8)))
         elements.append(h_table)
-        elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey, spaceBefore=4, spaceAfter=20))
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey, spaceBefore=2, spaceAfter=20))
     else:
         elements.append(Paragraph(f"<b>PACIENTE:</b> {patient_name.upper()}", styles['Normal']))
         elements.append(Spacer(1, 15))
