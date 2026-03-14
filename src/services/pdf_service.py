@@ -412,6 +412,6 @@ def generate_ticket_pdf(org, ticket, items, patient, owner, vet):
     elements.append(Spacer(1, 20))
     elements.append(Paragraph("<i>Este ticket es un comprobante interno y no reemplaza un comprobante fiscal.</i>", styles['Italic']))
     
-    doc.build(elements)
+    doc.build(elements, onFirstPage=lambda c, d: draw_watermark(c, d, org.name))
     buffer.seek(0)
     return buffer
