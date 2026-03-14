@@ -1490,6 +1490,13 @@
         }
 
         async function updateAppointmentStatus(id, newStatus) {
+            if (newStatus === 'attended') {
+                // Intercept and open finish modal instead of silent update
+                openFinishModalFromAppointment(id);
+                // Return dropdown to previous state until modal succeeds? Keep it visually changed is fine if page reloads.
+                return;
+            }
+
             const res = await fetch(`/admin/update_appointment_status/${id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1932,6 +1939,7 @@
         <div class="modal-content" style="max-width: 800px;">
             <h2>🧾 Finalizar Consulta y Generar Ticket</h2>
             <input type="hidden" id="finishAttId">
+            <input type="hidden" id="finishApptId">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <!-- Left: Services Adder -->
@@ -2124,6 +2132,15 @@
 
         function openFinishModal(attId) {
             document.getElementById('finishAttId').value = attId;
+            document.getElementById('finishApptId').value = ''; // Clean
+            ticketItems = [];
+            renderTicketPreview();
+            document.getElementById('finishAttentionModal').style.display = 'flex';
+        }
+
+        function openFinishModalFromAppointment(appId) {
+            document.getElementById('finishApptId').value = appId;
+            document.getElementById('finishAttId').value = ''; // Clean
             ticketItems = [];
             renderTicketPreview();
             document.getElementById('finishAttentionModal').style.display = 'flex';
@@ -2189,11 +2206,18 @@
 
         async function submitFinishAttention() {
             const attId = document.getElementById('finishAttId').value;
+            const appId = document.getElementById('finishApptId').value;
             const notes = document.getElementById('finishNotes').value;
 
             if (ticketItems.length === 0) return alert("Agregue al menos un item");
 
-            const res = await fetch(`/attentions/finish/${attId}`, {
+            let url = `/attentions/finish/${attId}`;
+            if (appId) {
+                // Estamos viniendo desde el modulo de Citas
+                url = `/attentions/finish_appointment/${appId}`;
+            }
+
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ items: ticketItems, notes })
@@ -2201,10 +2225,15 @@
 
             if (res.ok) {
                 document.getElementById('finishAttentionModal').style.display = 'none';
-                loadAttentions();
-                alert("Consulta finalizada y Ticket generado.");
+                if (appId) {
+                     window.location.href = window.location.href; // Recargar para ver cita atendida
+                } else {
+                     loadAttentions(); // Recargar kanban
+                }
+                alert("Consulta finalizada y Ticket generado correctamente en Caja.");
             } else {
-                alert("Error al finalizar");
+                const err = await res.json();
+                alert("Error al finalizar: " + (err.detail || ''));
             }
         }
 

@@ -163,6 +163,91 @@ async def finish_attention(att_id: int, request: Request, username: str = Depend
         await session.commit()
         
         # 4. Pro: Generate PDF (Async task or immediate return?)
-        # For now, just return success and let frontend call generate_pdf endpoint
         
+        return {"status": "success", "ticket_id": ticket.id}
+
+@router.post("/finish_appointment/{app_id}")
+async def finish_appointment_to_caja(app_id: int, request: Request, username: str = Depends(admin_required)):
+    data = await request.json()
+    items = data.get("items", [])
+    payment_method = data.get("payment_method", "Efectivo")
+    notes = data.get("notes")
+    
+    if not items:
+        raise HTTPException(status_code=400, detail="Debe agregar al menos un servicio o producto.")
+
+    async with AsyncSessionLocal() as session:
+        user, org = await get_org(username, session)
+        
+        # 1. Fetch Appointment to get patient
+        from src.models.models import Appointment
+        app_res = await session.execute(
+            select(Appointment).where(Appointment.id == app_id, Appointment.org_id == org.id)
+        )
+        appointment = app_res.scalar()
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Cita no encontrada.")
+        
+        # Try to find the Patient using the appointment's pet_name and owner
+        # Appointment doesn't explicitly store patient_id, but uses pet_name and owner_id
+        pat_res = await session.execute(
+            select(Patient).where(
+                Patient.org_id == org.id, 
+                Patient.owner_id == appointment.owner_id, 
+                Patient.name == appointment.pet_name
+            )
+        )
+        patient = pat_res.scalar()
+        if not patient:
+            raise HTTPException(status_code=400, detail="El paciente de esta cita no está registrado en el sistema. Asegúrese de que el paciente exista.")
+
+        # 2. Update Appointment Status
+        appointment.status = 'attended'
+
+        # 3. Create a Finished Attention directly
+        att = MedicalAttention(
+            org_id=org.id,
+            patient_id=patient.id,
+            vet_id=user.id,
+            status="finished",
+            start_date=appointment.date,
+            end_date=datetime.now(),
+            notes=notes or "Consulta generada directamente desde Citas."
+        )
+        session.add(att)
+        await session.flush() # Get Attention ID
+
+        # 4. Generate Ticket
+        last_ticket = await session.execute(
+            select(Ticket).where(Ticket.org_id == org.id).order_by(desc(Ticket.id)).limit(1)
+        )
+        last_t = last_ticket.scalar()
+        last_num = int(last_t.ticket_number) if last_t and last_t.ticket_number.isdigit() else 0
+        new_num = f"{last_num + 1:06d}"
+        
+        total = sum(float(i['price']) * int(i.get('quantity', 1)) for i in items)
+        
+        ticket = Ticket(
+            attention_id=att.id,
+            org_id=org.id,
+            ticket_number=new_num,
+            total_amount=total,
+            payment_status="paid",
+            payment_method=payment_method
+        )
+        session.add(ticket)
+        await session.flush()
+        
+        # 5. Add Ticket Items
+        for i in items:
+            t_item = TicketItem(
+                ticket_id=ticket.id,
+                description=i['description'],
+                unit_price=float(i['price']),
+                quantity=int(i.get('quantity', 1)),
+                subtotal=float(i['price']) * int(i.get('quantity', 1))
+            )
+            session.add(t_item)
+            
+        await session.commit()
         return {"status": "success", "ticket_id": ticket.id}
