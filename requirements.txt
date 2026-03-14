@@ -21,3 +21,6 @@ reportlab
 mercadopago
 supabase
 qrcode
+fpdf2
+segno
+pypng
